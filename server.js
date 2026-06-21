@@ -127,7 +127,7 @@ async function callDM(room, userAction, playerName, apiKey) {
   const client = getClient(apiKey);
   const msgs = [...room.history.slice(-24), { role:'user', content:`${playerName}: ${userAction}` }];
   const res = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-opus-4-8',
     max_tokens: 750,
     system: buildSystemPrompt(room),
     messages: msgs

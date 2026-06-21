@@ -152,7 +152,7 @@ npm run electron:dev
 | Capa | Tecnología |
 |---|---|
 | Backend | Node.js + Express + Socket.io |
-| IA / DM | Claude claude-sonnet-4-6 (Anthropic) |
+| IA / DM | Claude claude-opus-4-8 (Anthropic) |
 | Frontend | HTML5 + CSS3 + JS vanilla |
 | Desktop | Electron + electron-builder |
 | Móvil | Capacitor |
