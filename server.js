@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const Anthropic = require('@anthropic-ai/sdk');
 const path = require('path');
 const crypto = require('crypto');
+const subs = require('./subscriptions');
 
 const app = express();
 const server = http.createServer(app);
@@ -20,7 +21,10 @@ const MODELS = {
   'claude-sonnet-4-6': { name: 'Claude Sonnet 4.6', tier: 'Equilibrado',       cost: 'Coste medio' },
   'claude-haiku-4-5':  { name: 'Claude Haiku 4.5', tier: 'Más rápido y barato', cost: 'Coste más bajo' }
 };
+// Para jugadores con su propia clave (BYOK) el modelo por defecto es Opus.
+// Para jugadores en suscripción (clave del servidor) se fuerza Haiku para controlar coste.
 const DEFAULT_MODEL = 'claude-opus-4-8';
+const SUB_MODEL = 'claude-haiku-4-5';
 function resolveModel(id) { return MODELS[id] ? id : DEFAULT_MODEL; }
 
 const RACES = ['Humano', 'Elfo', 'Enano', 'Mediano', 'Gnomo', 'Semiorco', 'Tiefling', 'Draconiano'];
@@ -149,8 +153,12 @@ async function callDM(room, userAction, playerName, apiKey, model) {
 
 // ---- Middleware ----
 io.use((socket, next) => {
-  if (socket.handshake.auth?.apiKey) socket.apiKey = socket.handshake.auth.apiKey;
-  socket.model = resolveModel(socket.handshake.auth?.model);
+  const auth = socket.handshake.auth || {};
+  socket.byok = !!auth.apiKey;          // ¿el jugador trae su propia clave?
+  socket.apiKey = auth.apiKey || null;
+  socket.userId = (auth.userId || '').toString().slice(0, 64) || null;
+  // BYOK: el jugador elige modelo. Suscripción/servidor: Haiku forzado.
+  socket.model = socket.byok ? resolveModel(auth.model) : SUB_MODEL;
   next();
 });
 
@@ -210,6 +218,15 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Gating por suscripción (solo si NO trae su propia clave API).
+    if (!socket.byok) {
+      const ent = subs.status(socket.userId);
+      if (!ent.allowed) {
+        socket.emit('paywall', { ...ent, reason: 'trial_ended' });
+        return;
+      }
+    }
+
     io.to(currentRoom).emit('player_message', { player: currentPlayer.name, text: action });
     io.to(currentRoom).emit('dm_thinking');
 
@@ -260,6 +277,12 @@ io.on('connection', (socket) => {
         players: room.players
       });
 
+      // Consume una acción de prueba (solo jugadores sin clave propia y sin suscripción).
+      if (!socket.byok) {
+        const ent = subs.consumeTrial(socket.userId);
+        socket.emit('entitlement', ent);
+      }
+
     } catch (err) {
       const isKey = err.code === 'NO_API_KEY' || err.status === 401;
       socket.emit('dm_message', {
@@ -278,7 +301,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('set_model', (model) => {
-    socket.model = resolveModel(model);
+    // Solo los jugadores BYOK pueden cambiar de modelo; en suscripción se mantiene Haiku.
+    if (socket.byok) socket.model = resolveModel(model);
   });
 
   socket.on('request_state', () => {
@@ -306,6 +330,36 @@ app.get('/api/models', (_, res) => res.json({
   default: DEFAULT_MODEL
 }));
 app.get('/health', (_, res) => res.json({ ok:true }));
+
+// --- Suscripción / monetización ---
+
+// Config pública de facturación (la app la consulta para mostrar precio/producto).
+app.get('/api/billing-config', (_, res) => res.json({
+  productId: subs.SUB_PRODUCT_ID,
+  trialActions: subs.TRIAL_ACTIONS,
+  billingAvailable: subs.config.hasBilling,
+  devBilling: subs.config.devBilling
+}));
+
+// Estado de derechos del usuario (prueba restante / suscripción activa).
+app.get('/api/entitlement', (req, res) => {
+  res.json(subs.status((req.query.userId || '').toString().slice(0, 64)));
+});
+
+// Verifica un token de compra de Google Play y activa la suscripción.
+app.post('/api/verify-purchase', async (req, res) => {
+  try {
+    const { userId, purchaseToken, productId } = req.body || {};
+    const result = await subs.verifyPurchase(
+      (userId || '').toString().slice(0, 64),
+      (purchaseToken || '').toString(),
+      (productId || '').toString()
+    );
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 async function start(port) {
   const p = port || parseInt(process.env.PORT) || 3000;

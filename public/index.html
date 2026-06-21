@@ -309,6 +309,30 @@ body {
 .model-opt .model-meta { font-size:.74rem; color:var(--parch2); }
 #model-cost-note { color:rgba(244,232,193,.5); font-size:.75rem; }
 
+/* Entitlement badge in header */
+.ent-badge {
+  background:rgba(201,162,39,.12); border:1px solid rgba(201,162,39,.4); color:var(--gold);
+  border-radius:4px; padding:4px 9px; cursor:pointer; font-size:.72rem; font-family:'IM Fell English',serif;
+  white-space:nowrap; transition:all .15s; display:none;
+}
+.ent-badge:hover { background:rgba(201,162,39,.25); }
+.ent-badge.premium { border-color:#5cb85c; color:#7ed87e; background:rgba(92,184,92,.12); }
+.ent-badge.low { border-color:var(--blood); color:#e88; background:rgba(139,26,26,.18); }
+.ent-badge.show { display:inline-block; }
+
+/* Paywall */
+.pw-hero { text-align:center; margin-bottom:6px; }
+.pw-hero .pw-icon { font-size:2.6rem; }
+.pw-price { font-family:'IM Fell English',serif; color:var(--gold); font-size:1.8rem; text-align:center; margin:6px 0 2px; }
+.pw-price small { font-size:.9rem; color:var(--parch2); }
+.pw-features { list-style:none; padding:0; margin:14px 0; }
+.pw-features li { color:var(--parch); font-size:.92rem; padding:5px 0 5px 26px; position:relative; }
+.pw-features li::before { content:'⚔️'; position:absolute; left:0; }
+.pw-trial-line { text-align:center; color:var(--parch2); font-size:.85rem; margin-bottom:10px; }
+.pw-btns { display:flex; flex-direction:column; gap:8px; }
+.pw-alt { text-align:center; font-size:.78rem; color:rgba(244,232,193,.55); margin-top:12px; line-height:1.6; }
+.pw-alt a { color:var(--gold); cursor:pointer; text-decoration:underline; }
+
 /* ===== DOWNLOAD MODAL ===== */
 .platform-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
 .plat-card { background:rgba(0,0,0,.3); border:1px solid rgba(201,162,39,.25); border-radius:6px; padding:14px; }
@@ -431,6 +455,7 @@ body {
       <button class="d-btn" onclick="rollFree(20)">d20</button>
     </div>
     <div class="header-btns">
+      <button class="ent-badge" id="ent-badge" onclick="openPaywall()" title="Tu plan"></button>
       <button class="icon-btn" title="Configuración" onclick="openModal('settings-modal')">⚙️</button>
     </div>
   </div>
@@ -503,10 +528,39 @@ body {
       <label>Modelo del Dungeon Master</label>
       <div id="model-options" class="model-options"></div>
       <small id="model-cost-note" style="display:block;margin-top:6px;"></small>
+      <small style="display:block;margin-top:6px;color:rgba(244,232,193,.45);">Con suscripción Premium el DM usa Claude Haiku (rápido y económico). El selector de modelo solo aplica si juegas con tu propia clave API.</small>
     </div>
 
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(201,162,39,.2);">
       <p style="color:rgba(244,232,193,.5);font-size:.78rem;">La clave se guarda localmente en tu dispositivo y no se envía a ningún servidor externo que no sea Anthropic. El modelo elegido afecta a la calidad de la narración y al coste por partida.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAYWALL MODAL ===== -->
+<div class="modal-overlay" id="paywall-modal">
+  <div class="modal modal-rel" style="max-width:440px;">
+    <button class="close-btn" onclick="closeModal('paywall-modal')">✕</button>
+    <div class="pw-hero">
+      <div class="pw-icon">🐉</div>
+      <h2 style="text-align:center;">Taberna Premium</h2>
+    </div>
+    <div class="pw-price" id="pw-price">— <small>/ mes</small></div>
+    <div class="pw-trial-line" id="pw-trial-line"></div>
+    <ul class="pw-features">
+      <li>Aventuras ilimitadas con Dungeon Master por IA</li>
+      <li>Historias completas con principio, nudo y final</li>
+      <li>Multijugador con amigos por código de sala</li>
+      <li>Sin anuncios</li>
+    </ul>
+    <div class="pw-btns">
+      <button class="btn btn-gold" id="pw-subscribe-btn" onclick="startSubscribe()">Suscribirse</button>
+      <button class="btn btn-dark btn-sm" onclick="restorePurchases()">Restaurar compra</button>
+    </div>
+    <div class="notice" id="paywall-notice"></div>
+    <div class="pw-alt">
+      ¿Tienes tu propia clave de Anthropic? <a onclick="closeModal('paywall-modal'); openModal('settings-modal');">Úsala y juega gratis</a>.<br>
+      La suscripción se gestiona por Google Play y puedes cancelarla cuando quieras.
     </div>
   </div>
 </div>
@@ -579,10 +633,20 @@ let pendingRoomId = null;
 let lastSuggestions = [];
 let currentAct = 1;
 
+// ---- User identity (para suscripción / prueba) ----
+function getUserId() {
+  let id = localStorage.getItem('user_id');
+  if (!id) {
+    id = 'u_' + (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2));
+    localStorage.setItem('user_id', id);
+  }
+  return id;
+}
+
 // ---- Init socket ----
 function initSocket(apiKey) {
   if (socket) socket.disconnect();
-  const auth = {};
+  const auth = { userId: getUserId() };
   if (apiKey) auth.apiKey = apiKey;
   auth.model = getSavedModel();
   socket = io({ auth });
@@ -592,6 +656,8 @@ function initSocket(apiKey) {
   socket.on('dm_thinking', () => setThinking(true));
   socket.on('dice_roll', onDiceRoll);
   socket.on('room_state', (d) => { updateAct(d.act); if(d.storyTitle) setTitle(d.storyTitle); if(d.players) updatePlayers(d.players); });
+  socket.on('entitlement', (e) => { setThinking(false); updateEntitlementUI(e); });
+  socket.on('paywall', (e) => { setThinking(false); updateEntitlementUI(e); openPaywall(); });
 }
 
 // ---- Landing ----
@@ -657,6 +723,7 @@ function doCreateChar() {
     updateInventory(myPlayer.inventory, myPlayer.gold);
     showScreen('game-screen');
     socket.emit('request_state');
+    refreshEntitlement();
   });
 }
 
@@ -875,11 +942,132 @@ function updateCostNote(id) {
   note.textContent = tips[id] || '';
 }
 
+// ---- Subscription / paywall ----
+let billingConfig = { productId: 'taberna_premium_monthly', trialActions: 15, billingAvailable: false, devBilling: false };
+let lastEntitlement = null;
+const SUB_PRICE = '3,99 €'; // precio mostrado; el real lo define Google Play Console
+
+async function loadBillingConfig() {
+  try { billingConfig = await fetch('/api/billing-config').then(r => r.json()); } catch {}
+  const priceEl = document.getElementById('pw-price');
+  if (priceEl) priceEl.innerHTML = `${SUB_PRICE} <small>/ mes</small>`;
+}
+
+async function refreshEntitlement() {
+  // Si el jugador usa su propia clave, no hay límite ni paywall.
+  if (getSavedKey()) { updateEntitlementUI({ byok: true }); return; }
+  try {
+    const e = await fetch('/api/entitlement?userId=' + encodeURIComponent(getUserId())).then(r => r.json());
+    updateEntitlementUI(e);
+  } catch {}
+}
+
+function updateEntitlementUI(e) {
+  lastEntitlement = e;
+  const badge = document.getElementById('ent-badge');
+  if (!badge) return;
+  badge.classList.add('show');
+  badge.classList.remove('premium', 'low');
+
+  if (e.byok) {
+    badge.classList.add('premium');
+    badge.textContent = '🔑 Clave propia';
+    badge.onclick = () => openModal('settings-modal');
+    return;
+  }
+  badge.onclick = openPaywall;
+  if (e.subscribed) {
+    badge.classList.add('premium');
+    badge.textContent = '★ Premium';
+  } else {
+    const rem = e.trialRemaining ?? 0;
+    if (rem <= 3) badge.classList.add('low');
+    badge.textContent = `🎁 Prueba: ${rem}`;
+  }
+}
+
+function openPaywall() {
+  const line = document.getElementById('pw-trial-line');
+  if (lastEntitlement && lastEntitlement.subscribed) {
+    line.textContent = '✓ Ya eres Premium. ¡Gracias por apoyar el juego!';
+    document.getElementById('pw-subscribe-btn').textContent = 'Gestionar suscripción';
+  } else {
+    const rem = lastEntitlement ? (lastEntitlement.trialRemaining ?? 0) : billingConfig.trialActions;
+    line.textContent = rem > 0
+      ? `Te quedan ${rem} acciones de prueba gratis.`
+      : 'Tu prueba gratuita ha terminado.';
+    document.getElementById('pw-subscribe-btn').textContent = 'Suscribirse';
+  }
+  openModal('paywall-modal');
+}
+
+// Inicia la compra. Usa el plugin de facturación nativo si está; si no, modo dev o aviso web.
+async function startSubscribe() {
+  if (lastEntitlement && lastEntitlement.subscribed) {
+    // Gestionar: abrir la página de suscripciones de Google Play
+    window.open('https://play.google.com/store/account/subscriptions', '_blank');
+    return;
+  }
+
+  // Modo desarrollo: simula una compra para probar el flujo de extremo a extremo.
+  if (billingConfig.devBilling) {
+    await sendPurchaseToken('dev-token-' + Date.now());
+    return;
+  }
+
+  // Plugin nativo (cordova-plugin-purchase / CdvPurchase) en la app Android.
+  if (window.CdvPurchase) {
+    try {
+      const { store, ProductType, Platform } = window.CdvPurchase;
+      const offer = store.get(billingConfig.productId, Platform.GOOGLE_PLAY)?.getOffer();
+      if (!offer) { showNotice('paywall-notice', 'Producto no disponible. Inténtalo más tarde.'); return; }
+      store.when().approved(async (tx) => {
+        const token = tx.purchaseToken || (tx.nativePurchase && tx.nativePurchase.purchaseToken);
+        await sendPurchaseToken(token);
+        tx.finish();
+      });
+      await store.order(offer);
+    } catch (err) {
+      showNotice('paywall-notice', 'No se pudo iniciar la compra: ' + err.message);
+    }
+    return;
+  }
+
+  // Navegador web sin facturación: dirigir a la app o a BYOK.
+  showNotice('paywall-notice', 'La suscripción está disponible en la app de Android. En web puedes jugar gratis con tu propia clave API (Configuración ⚙️).');
+}
+
+async function sendPurchaseToken(purchaseToken) {
+  try {
+    const res = await fetch('/api/verify-purchase', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ userId: getUserId(), purchaseToken, productId: billingConfig.productId })
+    }).then(r => r.json());
+    if (res.error) { showNotice('paywall-notice', 'No se pudo verificar la compra: ' + res.error); return; }
+    updateEntitlementUI(res);
+    if (res.subscribed) { closeModal('paywall-modal'); showNotice('settings-notice', '¡Bienvenido a Premium!'); }
+  } catch (err) {
+    showNotice('paywall-notice', 'Error de red al verificar la compra.');
+  }
+}
+
+function restorePurchases() {
+  if (window.CdvPurchase) {
+    window.CdvPurchase.store.restorePurchases();
+    setTimeout(refreshEntitlement, 1500);
+  } else {
+    refreshEntitlement();
+    showNotice('paywall-notice', 'Estado actualizado.');
+  }
+}
+
 // Load saved settings
 window.addEventListener('load', () => {
   const k = getSavedKey();
   if (k) document.getElementById('api-key-input').value = k;
   loadModels();
+  loadBillingConfig();
 });
 
 // ---- Screens ----

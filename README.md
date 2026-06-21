@@ -28,11 +28,54 @@ El juego usa Claude (IA de Anthropic) como DM. Necesitas una clave API gratuita:
 
 ---
 
+## Dos formas de jugar
+
+| Modo | Quién paga la IA | Modelo del DM |
+|---|---|---|
+| **Suscripción Premium** (Play Store) | El servidor (tú, el operador) | Claude Haiku 4.5 (rápido y barato) |
+| **Tu propia clave (BYOK)** | El propio jugador | El que elija: Opus / Sonnet / Haiku |
+
+Cada usuario nuevo tiene una **prueba gratuita** (`TRIAL_ACTIONS`, 15 por defecto). Al agotarse, aparece el paywall para suscribirse. Quien añade su propia clave API juega sin límite y elige modelo.
+
+---
+
+## Monetización: suscripción en Google Play
+
+Esta versión incluye un sistema de suscripción listo para producción:
+
+- **Modelo Haiku forzado** para usuarios de suscripción → coste de API mínimo, márgenes sanos.
+- **Prueba gratuita** configurable por usuario antes del paywall.
+- **Verificación de compra en servidor** contra la API de Google Play (segura, no falsificable).
+- **Paywall, contador de prueba y restaurar compra** en la app.
+
+### Puesta en marcha (resumen)
+
+1. **Google Play Console** → crea la app y un producto de **suscripción** (ej. `taberna_premium_monthly`).
+2. **Google Cloud** → crea una **cuenta de servicio**, descarga su JSON y dale acceso a la app en Play Console (API de Android Developer).
+3. Configura el `.env` del servidor (ver `.env.example`): `ANTHROPIC_API_KEY`, `SUB_PRODUCT_ID`, `PLAY_PACKAGE_NAME`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `TRIAL_ACTIONS`.
+4. **Despliega el servidor** en un host con HTTPS (Render, Railway, Fly.io, un VPS…). La app móvil hablará con él.
+5. En la app Android, integra **Google Play Billing** con el plugin `cordova-plugin-purchase` (el cliente ya está cableado a `window.CdvPurchase`).
+6. Para **probar el flujo en local sin Google**, pon `DEV_BILLING=true`: el botón "Suscribirse" concede 30 días simulados.
+
+### Variables de entorno de monetización
+
+| Variable | Descripción |
+|---|---|
+| `TRIAL_ACTIONS` | Acciones gratis antes del paywall (default 15) |
+| `SUB_PRODUCT_ID` | ID del producto de suscripción en Play Console |
+| `PLAY_PACKAGE_NAME` | Paquete de la app (= `capacitor.config.json`) |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Ruta al JSON de la cuenta de servicio |
+| `DEV_BILLING` | `true` solo en local para simular compras |
+
+> **Economía:** con Haiku (~$1/M entrada, $5/M salida) una partida cuesta céntimos. Una suscripción de ~4€/mes (Google se queda el 15%) cubre de sobra el coste de la API de un jugador medio.
+
+---
+
 ## Plataformas
 
 ### 🌐 Web — Jugar ahora en el navegador
 
-Si hay un servidor desplegado, abre la URL directamente. Si no, usa la opción local.
+Si hay un servidor desplegado, abre la URL directamente. Si no, usa la opción local. En web la suscripción no está disponible (no hay Play Billing); usa tu propia clave API.
 
 ---
 
