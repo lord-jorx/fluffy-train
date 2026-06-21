@@ -290,6 +290,25 @@ body {
 .settings-save-row { display:flex; gap:8px; align-items:center; margin-top:6px; }
 .key-status { font-size:.8rem; color:var(--parch2); }
 
+/* Model selector */
+.model-options { display:flex; flex-direction:column; gap:7px; }
+.model-opt {
+  display:flex; align-items:center; gap:10px;
+  background:rgba(0,0,0,.3); border:2px solid rgba(201,162,39,.25); border-radius:5px;
+  padding:9px 12px; cursor:pointer; transition:all .15s;
+}
+.model-opt:hover { border-color:rgba(201,162,39,.5); }
+.model-opt.selected { border-color:var(--gold); background:rgba(201,162,39,.1); }
+.model-opt .radio {
+  width:16px; height:16px; border-radius:50%; border:2px solid var(--gold2); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.model-opt.selected .radio::after { content:''; width:8px; height:8px; border-radius:50%; background:var(--gold); }
+.model-opt .model-info { flex:1; min-width:0; }
+.model-opt .model-name { color:var(--gold); font-size:.92rem; font-weight:600; }
+.model-opt .model-meta { font-size:.74rem; color:var(--parch2); }
+#model-cost-note { color:rgba(244,232,193,.5); font-size:.75rem; }
+
 /* ===== DOWNLOAD MODAL ===== */
 .platform-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
 .plat-card { background:rgba(0,0,0,.3); border:1px solid rgba(201,162,39,.25); border-radius:6px; padding:14px; }
@@ -479,8 +498,15 @@ body {
       <span class="key-status" id="key-status"></span>
     </div>
     <div class="notice" id="settings-notice"></div>
+
+    <div class="settings-field" style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(201,162,39,.2);">
+      <label>Modelo del Dungeon Master</label>
+      <div id="model-options" class="model-options"></div>
+      <small id="model-cost-note" style="display:block;margin-top:6px;"></small>
+    </div>
+
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(201,162,39,.2);">
-      <p style="color:rgba(244,232,193,.5);font-size:.78rem;">La clave se guarda localmente en tu dispositivo y no se envía a ningún servidor externo que no sea Anthropic.</p>
+      <p style="color:rgba(244,232,193,.5);font-size:.78rem;">La clave se guarda localmente en tu dispositivo y no se envía a ningún servidor externo que no sea Anthropic. El modelo elegido afecta a la calidad de la narración y al coste por partida.</p>
     </div>
   </div>
 </div>
@@ -556,7 +582,10 @@ let currentAct = 1;
 // ---- Init socket ----
 function initSocket(apiKey) {
   if (socket) socket.disconnect();
-  socket = io({ auth: apiKey ? { apiKey } : {} });
+  const auth = {};
+  if (apiKey) auth.apiKey = apiKey;
+  auth.model = getSavedModel();
+  socket = io({ auth });
 
   socket.on('dm_message', onDmMessage);
   socket.on('player_message', onPlayerMessage);
@@ -784,6 +813,7 @@ document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('cli
 
 // ---- Settings ----
 function getSavedKey() { return localStorage.getItem('anthropic_api_key') || ''; }
+function getSavedModel() { return localStorage.getItem('dm_model') || 'claude-opus-4-8'; }
 
 function saveApiKey() {
   const key = document.getElementById('api-key-input').value.trim();
@@ -799,10 +829,57 @@ function saveApiKey() {
   }
 }
 
-// Load saved key
+// ---- Model selector ----
+let availableModels = [];
+
+async function loadModels() {
+  try {
+    const data = await fetch('/api/models').then(r => r.json());
+    availableModels = data.models;
+  } catch {
+    availableModels = [{ id:'claude-opus-4-8', name:'Claude Opus 4.8', tier:'Mejor narrativa', cost:'Coste más alto' }];
+  }
+  renderModelOptions();
+}
+
+function renderModelOptions() {
+  const el = document.getElementById('model-options');
+  if (!el) return;
+  const current = getSavedModel();
+  el.innerHTML = availableModels.map(m => `
+    <div class="model-opt ${m.id === current ? 'selected' : ''}" data-model="${m.id}" onclick="selectModel('${m.id}')">
+      <div class="radio"></div>
+      <div class="model-info">
+        <div class="model-name">${esc(m.name)}</div>
+        <div class="model-meta">${esc(m.tier)} · ${esc(m.cost)}</div>
+      </div>
+    </div>`).join('');
+  updateCostNote(current);
+}
+
+function selectModel(id) {
+  localStorage.setItem('dm_model', id);
+  document.querySelectorAll('.model-opt').forEach(o => o.classList.toggle('selected', o.dataset.model === id));
+  updateCostNote(id);
+  if (socket) socket.emit('set_model', id);
+}
+
+function updateCostNote(id) {
+  const note = document.getElementById('model-cost-note');
+  if (!note) return;
+  const tips = {
+    'claude-opus-4-8':   'La narración más rica y coherente. Recomendado si la historia es lo primero.',
+    'claude-sonnet-4-6': 'Buen equilibrio entre calidad, velocidad y coste. Ideal para partidas largas.',
+    'claude-haiku-4-5':  'Respuestas rápidas y el menor coste. Perfecto para probar o jugar mucho.'
+  };
+  note.textContent = tips[id] || '';
+}
+
+// Load saved settings
 window.addEventListener('load', () => {
   const k = getSavedKey();
   if (k) document.getElementById('api-key-input').value = k;
+  loadModels();
 });
 
 // ---- Screens ----

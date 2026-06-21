@@ -14,6 +14,15 @@ app.use(express.json());
 
 const rooms = new Map();
 
+// Modelos seleccionables por el jugador (id -> metadatos)
+const MODELS = {
+  'claude-opus-4-8':   { name: 'Claude Opus 4.8', tier: 'Mejor narrativa',     cost: 'Coste más alto' },
+  'claude-sonnet-4-6': { name: 'Claude Sonnet 4.6', tier: 'Equilibrado',       cost: 'Coste medio' },
+  'claude-haiku-4-5':  { name: 'Claude Haiku 4.5', tier: 'Más rápido y barato', cost: 'Coste más bajo' }
+};
+const DEFAULT_MODEL = 'claude-opus-4-8';
+function resolveModel(id) { return MODELS[id] ? id : DEFAULT_MODEL; }
+
 const RACES = ['Humano', 'Elfo', 'Enano', 'Mediano', 'Gnomo', 'Semiorco', 'Tiefling', 'Draconiano'];
 const CLASSES = ['Guerrero', 'Mago', 'Pícaro', 'Clérigo', 'Bárbaro', 'Bardo', 'Paladín', 'Explorador'];
 const HIT_DICE = { Guerrero:10, Bárbaro:12, Paladín:10, Explorador:8, Clérigo:8, Bardo:8, Pícaro:8, Mago:6 };
@@ -123,11 +132,11 @@ function getClient(apiKey) {
   return new Anthropic({ apiKey: key });
 }
 
-async function callDM(room, userAction, playerName, apiKey) {
+async function callDM(room, userAction, playerName, apiKey, model) {
   const client = getClient(apiKey);
   const msgs = [...room.history.slice(-24), { role:'user', content:`${playerName}: ${userAction}` }];
   const res = await client.messages.create({
-    model: 'claude-opus-4-8',
+    model: resolveModel(model),
     max_tokens: 750,
     system: buildSystemPrompt(room),
     messages: msgs
@@ -141,6 +150,7 @@ async function callDM(room, userAction, playerName, apiKey) {
 // ---- Middleware ----
 io.use((socket, next) => {
   if (socket.handshake.auth?.apiKey) socket.apiKey = socket.handshake.auth.apiKey;
+  socket.model = resolveModel(socket.handshake.auth?.model);
   next();
 });
 
@@ -204,7 +214,7 @@ io.on('connection', (socket) => {
     io.to(currentRoom).emit('dm_thinking');
 
     try {
-      const raw = await callDM(room, action, currentPlayer.name, socket.apiKey);
+      const raw = await callDM(room, action, currentPlayer.name, socket.apiKey, socket.model);
       const parsed = parseResponse(raw);
 
       // Update state
@@ -267,6 +277,10 @@ io.on('connection', (socket) => {
     io.to(currentRoom).emit('dice_roll', { player:currentPlayer.name, sides, result:rollDice(sides) });
   });
 
+  socket.on('set_model', (model) => {
+    socket.model = resolveModel(model);
+  });
+
   socket.on('request_state', () => {
     if (!currentRoom) return;
     const room = getRoom(currentRoom);
@@ -287,6 +301,10 @@ io.on('connection', (socket) => {
 app.get('/api/races', (_, res) => res.json(RACES));
 app.get('/api/classes', (_, res) => res.json(CLASSES));
 app.get('/api/roll-stats', (_, res) => res.json(rollStats()));
+app.get('/api/models', (_, res) => res.json({
+  models: Object.entries(MODELS).map(([id, m]) => ({ id, ...m })),
+  default: DEFAULT_MODEL
+}));
 app.get('/health', (_, res) => res.json({ ok:true }));
 
 async function start(port) {

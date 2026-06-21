@@ -13,6 +13,7 @@ Funciona en navegador, desktop (Windows/Linux/Steam Deck) y móvil (Android/iOS)
 - **Dados completos** — d4 a d20 con modificadores automáticos de stat
 - **HP y combate** — Vida por clase+CON, tiradas de salvación con DC, daño por fallos
 - **Inventario y oro** — Equipo inicial visible por jugador
+- **Selector de modelo** — Elige el modelo del DM desde Configuración según calidad/coste: Opus 4.8 (mejor narrativa), Sonnet 4.6 (equilibrado) o Haiku 4.5 (más rápido y barato)
 
 ---
 
@@ -152,7 +153,7 @@ npm run electron:dev
 | Capa | Tecnología |
 |---|---|
 | Backend | Node.js + Express + Socket.io |
-| IA / DM | Claude claude-opus-4-8 (Anthropic) |
+| IA / DM | Claude (Opus 4.8 / Sonnet 4.6 / Haiku 4.5, seleccionable) |
 | Frontend | HTML5 + CSS3 + JS vanilla |
 | Desktop | Electron + electron-builder |
 | Móvil | Capacitor |
