@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#1a0d05"/>
+  <circle cx="256" cy="256" r="220" fill="#2d1208" stroke="#c9a227" stroke-width="12"/>
+  <!-- Dragon head -->
+  <ellipse cx="256" cy="230" rx="90" ry="70" fill="#8b1a1a"/>
+  <!-- Horns -->
+  <polygon points="210,175 195,110 225,165" fill="#c9a227"/>
+  <polygon points="302,175 317,110 287,165" fill="#c9a227"/>
+  <!-- Eyes -->
+  <circle cx="228" cy="215" r="12" fill="#c9a227"/>
+  <circle cx="284" cy="215" r="12" fill="#c9a227"/>
+  <circle cx="231" cy="212" r="5" fill="#120800"/>
+  <circle cx="287" cy="212" r="5" fill="#120800"/>
+  <!-- Snout -->
+  <ellipse cx="256" cy="255" rx="40" ry="25" fill="#6b1414"/>
+  <!-- Teeth -->
+  <polygon points="238,252 243,272 248,252" fill="#f4e8c1"/>
+  <polygon points="252,252 257,274 262,252" fill="#f4e8c1"/>
+  <polygon points="266,252 271,272 276,252" fill="#f4e8c1"/>
+  <!-- Fire breath -->
+  <ellipse cx="256" cy="340" rx="50" ry="30" fill="#c9a227" opacity=".9"/>
+  <ellipse cx="256" cy="370" rx="35" ry="25" fill="#e8641a" opacity=".8"/>
+  <ellipse cx="256" cy="395" rx="22" ry="18" fill="#f4a020" opacity=".6"/>
+  <!-- Wings hint -->
+  <path d="M166,240 Q120,190 140,270 Q160,290 180,265" fill="#5a1a1a" stroke="#8b1a1a" stroke-width="2"/>
+  <path d="M346,240 Q392,190 372,270 Q352,290 332,265" fill="#5a1a1a" stroke="#8b1a1a" stroke-width="2"/>
+  <!-- Gold border decoration -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#c9a227" stroke-width="8"/>
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#8b6914" stroke-width="2"/>
+</svg>

@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Taberna del Dragón — D&D Auto DM</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+:root {
+  --parch: #f4e8c1; --parch2: #e8d49a; --ink: #2c1810; --blood: #8b1a1a;
+  --gold: #c9a227; --gold2: #8b6914; --wood: #3d1f0d; --shadow: rgba(44,24,16,.7);
+  --green: #2d5a27; --success: #5cb85c; --fail: #d9534f;
+}
+
+* { box-sizing:border-box; margin:0; padding:0; }
+
+body {
+  background: #120800;
+  background-image: radial-gradient(ellipse at 20% 50%, rgba(50,15,3,.9) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 50%, rgba(50,15,3,.9) 0%, transparent 60%);
+  color: var(--ink);
+  font-family: 'Crimson Text', Georgia, serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== SCREENS ===== */
+.screen { display:none; }
+.screen.active { display:block; }
+#game-screen.active { display:flex; }
+
+/* ===== LANDING ===== */
+#landing {
+  min-height:100vh;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:20px; text-align:center;
+  animation: fadeIn .8s ease;
+}
+
+.sign {
+  background: linear-gradient(160deg, #4a2410, #2d1208);
+  border:3px solid var(--gold); border-radius:10px;
+  padding:40px 50px; margin-bottom:28px;
+  box-shadow: 0 0 60px rgba(201,162,39,.25), 0 20px 60px rgba(0,0,0,.7), inset 0 0 30px rgba(0,0,0,.4);
+  position:relative; max-width:560px;
+}
+.sign::before,.sign::after { content:'🐉'; position:absolute; top:-16px; font-size:2rem; }
+.sign::before { left:20px; } .sign::after { right:20px; }
+
+.sign h1 { font-family:'IM Fell English',serif; font-size:3rem; color:var(--gold); line-height:1.1; text-shadow:2px 3px 8px rgba(0,0,0,.8); }
+.sign p { color:var(--parch2); font-style:italic; font-size:1.1rem; margin-top:6px; }
+
+.tagline { color:rgba(244,232,193,.7); font-size:1rem; margin-bottom:28px; font-style:italic; }
+
+.btn-row { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+
+.btn {
+  font-family:'IM Fell English',serif; font-size:1.05rem; letter-spacing:.5px;
+  padding:12px 26px; border-radius:5px; cursor:pointer; border:2px solid;
+  transition:transform .15s, box-shadow .15s; user-select:none;
+}
+.btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.5); }
+.btn:active { transform:translateY(0); }
+.btn-gold { background:linear-gradient(135deg,#d4aa30,#9a7a18); border-color:var(--gold2); color:var(--wood); }
+.btn-dark { background:linear-gradient(135deg,#5a3010,#3d1f0d); border-color:#7a4a20; color:var(--parch); }
+.btn-blood { background:linear-gradient(135deg,#a01a1a,#6b1414); border-color:#8b1a1a; color:var(--parch); }
+.btn-sm { padding:7px 16px; font-size:.9rem; }
+
+.join-box { margin-top:16px; display:none; animation:fadeIn .3s; }
+.join-box input { background:rgba(244,232,193,.15); border:2px solid var(--gold2); color:var(--parch); font-family:'IM Fell English',serif; font-size:1.4rem; text-align:center; letter-spacing:6px; padding:10px 18px; border-radius:5px; width:200px; text-transform:uppercase; outline:none; }
+.join-box input:focus { border-color:var(--gold); }
+.join-row { display:flex; gap:8px; align-items:center; justify-content:center; margin-top:8px; }
+
+.platforms { color:rgba(244,232,193,.5); font-size:.8rem; margin-top:16px; }
+.platforms a { color:rgba(201,162,39,.7); text-decoration:none; cursor:pointer; }
+.platforms a:hover { color:var(--gold); text-decoration:underline; }
+
+/* ===== MODALS ===== */
+.modal-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.85);
+  z-index:1000; align-items:center; justify-content:center; padding:20px;
+}
+.modal-overlay.open { display:flex; animation:fadeIn .2s; }
+
+.modal {
+  background:linear-gradient(160deg,#4a2410,#2d1208);
+  border:2px solid var(--gold); border-radius:8px;
+  padding:28px; max-width:540px; width:100%;
+  box-shadow:0 0 40px rgba(201,162,39,.2);
+  color:var(--parch);
+  max-height:90vh; overflow-y:auto;
+}
+.modal h2 { font-family:'IM Fell English',serif; color:var(--gold); font-size:1.5rem; margin-bottom:16px; }
+.modal p { color:var(--parch2); line-height:1.7; font-size:.95rem; margin-bottom:10px; }
+.modal code { background:rgba(0,0,0,.4); padding:2px 6px; border-radius:3px; font-size:.85rem; color:#aef; }
+.modal pre { background:rgba(0,0,0,.4); padding:12px; border-radius:5px; font-size:.8rem; color:#aef; overflow-x:auto; margin:8px 0; line-height:1.6; }
+.modal h3 { color:var(--gold2); font-size:1rem; margin:14px 0 6px; text-transform:uppercase; letter-spacing:.5px; }
+.modal .close-btn { position:absolute; top:12px; right:16px; background:none; border:none; color:var(--parch2); font-size:1.4rem; cursor:pointer; }
+.modal-rel { position:relative; }
+.modal ul { padding-left:18px; color:var(--parch2); font-size:.9rem; line-height:1.8; }
+
+/* ===== CHAR CREATION ===== */
+#char-creation { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+
+.parchment {
+  background:var(--parch);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23f4e8c1'/%3E%3Crect x='0' y='0' width='2' height='2' fill='%23e8d8a0' opacity='.2'/%3E%3C/svg%3E");
+  border:3px solid var(--gold); border-radius:8px; padding:30px;
+  max-width:580px; width:100%;
+  box-shadow:0 0 40px rgba(0,0,0,.6), inset 0 0 30px rgba(201,162,39,.05);
+  animation:fadeIn .4s;
+}
+.parchment-title { font-family:'IM Fell English',serif; font-size:1.8rem; color:var(--blood); text-align:center; border-bottom:2px solid var(--gold); padding-bottom:10px; margin-bottom:20px; }
+
+.field { margin-bottom:14px; }
+.field label { display:block; font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.5px; color:var(--blood); margin-bottom:4px; }
+.field input, .field select { width:100%; background:var(--parch2); border:2px solid var(--gold2); color:var(--ink); font-family:'Crimson Text',serif; font-size:1rem; padding:9px 12px; border-radius:4px; outline:none; }
+.field input:focus, .field select:focus { border-color:var(--gold); }
+
+.fields-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+.stats-header { display:flex; align-items:center; justify-content:space-between; margin:16px 0 8px; }
+.stats-header label { font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.5px; color:var(--blood); }
+
+.stats-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+.stat-box { background:var(--wood); border:2px solid var(--gold); border-radius:4px; text-align:center; padding:8px 2px; }
+.stat-box .sn { font-size:.6rem; letter-spacing:1px; color:var(--parch2); text-transform:uppercase; }
+.stat-box .sv { font-size:1.5rem; font-weight:700; color:var(--gold); line-height:1.1; }
+.stat-box .sm { font-size:.7rem; color:#a0c8a0; }
+
+.char-hint { font-size:.8rem; font-style:italic; text-align:center; color:#666; margin:8px 0 16px; }
+.char-btns { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+/* ===== GAME SCREEN ===== */
+#game-screen {
+  flex-direction:column; height:100vh; width:100%; max-width:1300px; margin:0 auto;
+  padding:8px; gap:6px;
+}
+
+.game-top { display:flex; gap:8px; }
+.game-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+.game-sidebar { width:230px; flex-shrink:0; display:flex; flex-direction:column; gap:6px; }
+
+/* Header */
+.game-header {
+  background:rgba(15,7,2,.95); border:2px solid var(--gold); border-radius:6px;
+  padding:7px 14px; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;
+}
+.room-info { font-family:'IM Fell English',serif; color:var(--parch2); font-size:.85rem; }
+.room-info strong { color:var(--gold); letter-spacing:2px; font-size:1rem; }
+
+.act-track { display:flex; gap:4px; align-items:center; }
+.act-pip {
+  width:22px; height:22px; border-radius:50%; border:2px solid rgba(201,162,39,.3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:.65rem; font-family:'IM Fell English',serif; color:rgba(201,162,39,.4);
+  transition:all .4s;
+}
+.act-pip.done { border-color:var(--gold2); color:var(--gold2); background:rgba(201,162,39,.1); }
+.act-pip.active { border-color:var(--gold); color:var(--gold); background:rgba(201,162,39,.2); box-shadow:0 0 8px rgba(201,162,39,.4); }
+.act-label { font-size:.7rem; color:rgba(201,162,39,.5); margin-right:4px; }
+
+.story-title-display { font-family:'IM Fell English',serif; color:var(--gold); font-size:.85rem; font-style:italic; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.dice-row { display:flex; gap:4px; align-items:center; flex-wrap:wrap; }
+.d-btn { background:rgba(61,31,13,.8); border:1px solid var(--gold2); color:var(--gold); font-size:.7rem; padding:3px 7px; border-radius:3px; cursor:pointer; font-family:'IM Fell English',serif; transition:all .15s; }
+.d-btn:hover { background:var(--gold); color:var(--wood); }
+
+.header-btns { display:flex; gap:5px; }
+.icon-btn { background:none; border:1px solid rgba(201,162,39,.3); color:rgba(201,162,39,.6); border-radius:4px; padding:4px 8px; cursor:pointer; font-size:1rem; transition:all .15s; }
+.icon-btn:hover { border-color:var(--gold); color:var(--gold); }
+
+/* Chat log */
+.chat-log {
+  flex:1; background:rgba(5,2,0,.97); border:2px solid rgba(201,162,39,.25); border-radius:6px;
+  overflow-y:auto; padding:14px; scroll-behavior:smooth; min-height:0;
+}
+
+.msg { margin-bottom:13px; animation:msgIn .3s ease; }
+
+.msg-dm .mh { color:var(--blood); font-size:.75rem; font-weight:600; margin-bottom:3px; letter-spacing:.5px; }
+.msg-dm .mb { color:var(--parch); font-size:1rem; line-height:1.65; }
+.msg-dm .mb strong { color:var(--gold); }
+.msg-dm .mb em { color:var(--parch2); }
+
+.msg-player .mh { color:#7ab; font-size:.75rem; margin-bottom:2px; }
+.msg-player .mb { color:#cde; font-style:italic; font-size:.95rem; }
+
+.msg-system .mb { color:#666; font-size:.85rem; text-align:center; font-style:italic; }
+.msg-error .mb { color:#e88; font-size:.9rem; }
+
+.roll-card {
+  background:rgba(201,162,39,.07); border:1px solid rgba(201,162,39,.25); border-radius:5px;
+  padding:8px 12px; margin-bottom:10px; animation:msgIn .3s;
+}
+.roll-card .rt { font-family:'IM Fell English',serif; color:var(--gold); font-size:1.05rem; margin-bottom:2px; }
+.roll-card .rd { font-size:.8rem; color:#bbb; }
+.roll-card .rs { font-weight:700; }
+.roll-card .rs.ok { color:var(--success); }
+.roll-card .rs.fail { color:var(--fail); }
+
+.free-roll {
+  background:rgba(100,80,0,.1); border:1px solid rgba(201,162,39,.2); border-radius:4px;
+  padding:6px 10px; margin-bottom:8px; color:var(--gold); font-size:.9rem; animation:msgIn .3s;
+}
+
+.thinking { display:none; padding:8px 0; color:rgba(201,162,39,.6); font-style:italic; font-size:.9rem; animation:pulse 1.5s infinite; }
+.thinking.on { display:block; }
+
+/* Suggestion buttons */
+.suggestions {
+  display:flex; flex-wrap:wrap; gap:6px; padding:8px 0 4px;
+}
+.sug-btn {
+  background:rgba(61,31,13,.7); border:1px solid rgba(201,162,39,.4); color:var(--parch2);
+  font-family:'Crimson Text',serif; font-size:.85rem; padding:5px 12px; border-radius:4px;
+  cursor:pointer; transition:all .15s; text-align:left;
+}
+.sug-btn:hover { background:rgba(139,26,26,.5); border-color:var(--blood); color:var(--parch); }
+
+/* Input area */
+.input-area { display:flex; gap:7px; }
+#action-input {
+  flex:1; background:rgba(15,7,2,.9); border:2px solid rgba(201,162,39,.35); color:var(--parch);
+  font-family:'Crimson Text',serif; font-size:1rem; padding:10px 14px; border-radius:6px; outline:none;
+  transition:border-color .2s;
+}
+#action-input:focus { border-color:var(--gold); }
+#action-input::placeholder { color:rgba(244,232,193,.35); font-style:italic; }
+#send-btn {
+  background:linear-gradient(135deg,#a01a1a,#6b1414); border:2px solid var(--blood);
+  color:var(--parch); font-family:'IM Fell English',serif; font-size:1rem;
+  padding:10px 20px; border-radius:6px; cursor:pointer; white-space:nowrap; transition:all .2s;
+}
+#send-btn:hover { background:linear-gradient(135deg,#c01a1a,#8b1414); }
+
+/* Sidebar panels */
+.side-panel {
+  background:rgba(10,5,0,.92); border:2px solid rgba(201,162,39,.35); border-radius:6px; padding:10px;
+  color:var(--parch);
+}
+.side-panel h3 { font-family:'IM Fell English',serif; color:var(--gold); font-size:.8rem; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid rgba(201,162,39,.2); padding-bottom:5px; margin-bottom:8px; }
+
+.pc-card { margin-bottom:9px; padding:8px; background:rgba(255,255,255,.04); border-radius:4px; border-left:3px solid var(--gold2); }
+.pc-name { font-weight:600; color:var(--gold); font-size:.9rem; }
+.pc-sub { font-size:.72rem; color:#999; font-style:italic; margin-bottom:4px; }
+.hp-bar-wrap { margin-top:4px; }
+.hp-bar { height:7px; background:rgba(255,255,255,.08); border-radius:4px; overflow:hidden; }
+.hp-fill { height:100%; background:linear-gradient(90deg,#7a1414,#c0392b); border-radius:4px; transition:width .5s; }
+.hp-txt { font-size:.7rem; color:#aaa; margin-top:2px; }
+.mini-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-top:4px; }
+.ms { text-align:center; font-size:.65rem; color:#888; }
+.ms span { display:block; color:var(--gold2); font-weight:700; }
+
+.inv-item { font-size:.8rem; color:var(--parch2); line-height:1.7; }
+.inv-item::before { content:'• '; color:var(--gold2); }
+.gold-txt { font-size:.8rem; color:var(--gold); margin-top:4px; }
+
+/* ===== ENDING OVERLAY ===== */
+#ending-overlay {
+  display:none; position:fixed; inset:0; z-index:500;
+  background:rgba(0,0,0,.92); align-items:center; justify-content:center;
+  padding:20px;
+}
+#ending-overlay.open { display:flex; animation:fadeIn .8s; }
+
+.ending-box {
+  background:linear-gradient(160deg,#4a2410,#1a0a02);
+  border:3px solid var(--gold); border-radius:10px;
+  padding:40px; max-width:600px; width:100%; text-align:center;
+  box-shadow:0 0 80px rgba(201,162,39,.3);
+  animation:endingIn 1s ease;
+}
+.ending-icon { font-size:4rem; margin-bottom:16px; animation:float 3s ease-in-out infinite; }
+.ending-the-end { font-family:'IM Fell English',serif; font-size:2.5rem; color:var(--gold); text-shadow:0 0 20px rgba(201,162,39,.5); }
+.ending-story-title { font-family:'IM Fell English',serif; font-size:1.3rem; color:var(--parch2); font-style:italic; margin:8px 0 20px; }
+.ending-summary { color:var(--parch); font-size:1rem; line-height:1.7; margin-bottom:28px; }
+.ending-btns { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+
+/* ===== SETTINGS MODAL ===== */
+.settings-field { margin-bottom:14px; }
+.settings-field label { display:block; font-size:.8rem; text-transform:uppercase; letter-spacing:.5px; color:var(--gold2); margin-bottom:4px; }
+.settings-field input {
+  width:100%; background:rgba(0,0,0,.4); border:2px solid rgba(201,162,39,.3); color:var(--parch);
+  font-family:monospace; font-size:.85rem; padding:9px 12px; border-radius:4px; outline:none;
+}
+.settings-field input:focus { border-color:var(--gold); }
+.settings-field small { color:rgba(244,232,193,.5); font-size:.75rem; }
+.settings-save-row { display:flex; gap:8px; align-items:center; margin-top:6px; }
+.key-status { font-size:.8rem; color:var(--parch2); }
+
+/* Model selector */
+.model-options { display:flex; flex-direction:column; gap:7px; }
+.model-opt {
+  display:flex; align-items:center; gap:10px;
+  background:rgba(0,0,0,.3); border:2px solid rgba(201,162,39,.25); border-radius:5px;
+  padding:9px 12px; cursor:pointer; transition:all .15s;
+}
+.model-opt:hover { border-color:rgba(201,162,39,.5); }
+.model-opt.selected { border-color:var(--gold); background:rgba(201,162,39,.1); }
+.model-opt .radio {
+  width:16px; height:16px; border-radius:50%; border:2px solid var(--gold2); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.model-opt.selected .radio::after { content:''; width:8px; height:8px; border-radius:50%; background:var(--gold); }
+.model-opt .model-info { flex:1; min-width:0; }
+.model-opt .model-name { color:var(--gold); font-size:.92rem; font-weight:600; }
+.model-opt .model-meta { font-size:.74rem; color:var(--parch2); }
+#model-cost-note { color:rgba(244,232,193,.5); font-size:.75rem; }
+
+/* ===== DOWNLOAD MODAL ===== */
+.platform-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+.plat-card { background:rgba(0,0,0,.3); border:1px solid rgba(201,162,39,.25); border-radius:6px; padding:14px; }
+.plat-card h4 { color:var(--gold); font-size:.9rem; margin-bottom:6px; }
+.plat-card p { color:var(--parch2); font-size:.78rem; line-height:1.6; }
+.plat-card code { background:rgba(0,0,0,.4); padding:1px 4px; border-radius:2px; color:#aef; font-size:.75rem; }
+.notice { background:rgba(139,26,26,.2); border:1px solid var(--blood); border-radius:4px; padding:8px 12px; color:#e88; font-size:.85rem; margin-top:8px; display:none; }
+.notice.on { display:block; }
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes msgIn  { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+@keyframes pulse  { 0%,100%{opacity:.4} 50%{opacity:1} }
+@keyframes float  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+@keyframes endingIn { from{opacity:0;transform:scale(.92)} to{opacity:1;transform:scale(1)} }
+@keyframes diceAnim { 0%{transform:rotate(0) scale(1)} 50%{transform:rotate(180deg) scale(1.3)} 100%{transform:rotate(360deg) scale(1)} }
+.spin { animation:diceAnim .5s ease; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width:700px) {
+  .game-top { flex-direction:column; }
+  .game-sidebar { width:100%; flex-direction:row; overflow-x:auto; }
+  .game-sidebar .side-panel { min-width:200px; }
+  .fields-row { grid-template-columns:1fr; }
+  .stats-grid { grid-template-columns:repeat(3,1fr); }
+  .platform-grid { grid-template-columns:1fr; }
+  .act-track { display:none; }
+  .story-title-display { display:none; }
+  .game-header { gap:6px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LANDING ===== -->
+<div id="landing" class="screen active">
+  <div class="sign">
+    <h1>Taberna del Dragón</h1>
+    <p>D&D con Dungeon Master Automático por IA</p>
+  </div>
+  <p class="tagline">Para 1 o más jugadores • Historias con principio, desarrollo y final • Gratis</p>
+  <div class="btn-row">
+    <button class="btn btn-gold" onclick="doCreateRoom()">⚔️ Nueva Aventura</button>
+    <button class="btn btn-dark" onclick="toggleJoin()">🍺 Unirse a Sala</button>
+    <button class="btn btn-dark btn-sm" onclick="openModal('download-modal')">📦 Descargar</button>
+  </div>
+  <div class="join-box" id="join-box">
+    <div class="join-row">
+      <input type="text" id="room-input" placeholder="AB3CD" maxlength="5" onkeydown="if(event.key==='Enter')doJoin()">
+      <button class="btn btn-gold btn-sm" onclick="doJoin()">Entrar</button>
+    </div>
+  </div>
+  <div class="notice" id="land-notice"></div>
+  <div class="platforms">
+    Web · Local · <a onclick="openModal('download-modal')">Windows · Linux · Steam Deck · Android · iPhone</a>
+  </div>
+</div>
+
+<!-- ===== CHAR CREATION ===== -->
+<div id="char-creation" class="screen">
+  <div class="parchment">
+    <div class="parchment-title">⚔️ Crea tu Personaje</div>
+
+    <div class="field">
+      <label>Nombre del Héroe</label>
+      <input type="text" id="c-name" placeholder="Ej: Lyra la Silenciosa" maxlength="30">
+    </div>
+    <div class="fields-row">
+      <div class="field">
+        <label>Raza</label>
+        <select id="c-race"><option value="">— Elige raza —</option></select>
+      </div>
+      <div class="field">
+        <label>Clase</label>
+        <select id="c-class"><option value="">— Elige clase —</option></select>
+      </div>
+    </div>
+
+    <div class="stats-header">
+      <label>Atributos (4d6, descarta el menor)</label>
+      <button class="btn btn-dark btn-sm" onclick="rerollStats()">🎲 Tirar</button>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="sn">FUE</div><div class="sv" id="sv-FUE">—</div><div class="sm" id="sm-FUE"></div></div>
+      <div class="stat-box"><div class="sn">DES</div><div class="sv" id="sv-DES">—</div><div class="sm" id="sm-DES"></div></div>
+      <div class="stat-box"><div class="sn">CON</div><div class="sv" id="sv-CON">—</div><div class="sm" id="sm-CON"></div></div>
+      <div class="stat-box"><div class="sn">INT</div><div class="sv" id="sv-INT">—</div><div class="sm" id="sm-INT"></div></div>
+      <div class="stat-box"><div class="sn">SAB</div><div class="sv" id="sv-SAB">—</div><div class="sm" id="sm-SAB"></div></div>
+      <div class="stat-box"><div class="sn">CAR</div><div class="sv" id="sv-CAR">—</div><div class="sm" id="sm-CAR"></div></div>
+    </div>
+    <p class="char-hint">HP se calcula por clase + modificador de CON.</p>
+    <div class="char-btns">
+      <button class="btn btn-gold" onclick="doCreateChar()">🗡️ Entrar a la Taberna</button>
+      <button class="btn btn-dark btn-sm" onclick="showScreen('landing')">← Volver</button>
+    </div>
+    <div class="notice" id="char-notice"></div>
+  </div>
+</div>
+
+<!-- ===== GAME ===== -->
+<div id="game-screen" class="screen">
+  <!-- Header -->
+  <div class="game-header">
+    <div class="room-info">🏰 Sala: <strong id="g-room">—</strong></div>
+    <div class="story-title-display" id="g-title">La aventura comienza...</div>
+    <div class="act-track">
+      <span class="act-label">Acto</span>
+      <div class="act-pip" id="ap1">I</div>
+      <div class="act-pip" id="ap2">II</div>
+      <div class="act-pip" id="ap3">III</div>
+      <div class="act-pip" id="ap4">IV</div>
+    </div>
+    <div class="dice-row">
+      <span style="font-size:.7rem;color:rgba(244,232,193,.4);margin-right:2px;">🎲</span>
+      <button class="d-btn" onclick="rollFree(4)">d4</button>
+      <button class="d-btn" onclick="rollFree(6)">d6</button>
+      <button class="d-btn" onclick="rollFree(8)">d8</button>
+      <button class="d-btn" onclick="rollFree(10)">d10</button>
+      <button class="d-btn" onclick="rollFree(12)">d12</button>
+      <button class="d-btn" onclick="rollFree(20)">d20</button>
+    </div>
+    <div class="header-btns">
+      <button class="icon-btn" title="Configuración" onclick="openModal('settings-modal')">⚙️</button>
+    </div>
+  </div>
+
+  <div class="game-top" style="flex:1;min-height:0;display:flex;gap:6px;">
+    <!-- Sidebar -->
+    <div class="game-sidebar">
+      <div class="side-panel" style="flex:1;overflow-y:auto;">
+        <h3>🧙 Grupo</h3>
+        <div id="players-list"></div>
+      </div>
+      <div class="side-panel">
+        <h3>🎒 Inventario</h3>
+        <div id="my-inventory"></div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="game-main">
+      <!-- Chat -->
+      <div class="chat-log" id="chat-log">
+        <div class="thinking" id="thinking">⚔️ El Dungeon Master teje la narrativa...</div>
+      </div>
+
+      <!-- Suggestions -->
+      <div class="suggestions" id="suggestions"></div>
+
+      <!-- Input -->
+      <div class="input-area">
+        <input type="text" id="action-input" placeholder="¿Qué hace tu personaje?" maxlength="300"
+          onkeydown="if(event.key==='Enter')doSend()">
+        <button id="send-btn" onclick="doSend()">⚔️ Actuar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ENDING OVERLAY ===== -->
+<div id="ending-overlay">
+  <div class="ending-box">
+    <div class="ending-icon">🐉</div>
+    <div class="ending-the-end">— FIN —</div>
+    <div class="ending-story-title" id="ending-title"></div>
+    <div class="ending-summary" id="ending-summary"></div>
+    <div class="ending-btns">
+      <button class="btn btn-gold" onclick="newAdventure()">⚔️ Nueva Aventura</button>
+      <button class="btn btn-dark btn-sm" onclick="closeEnding()">📖 Ver el final</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SETTINGS MODAL ===== -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal modal-rel">
+    <button class="close-btn" onclick="closeModal('settings-modal')">✕</button>
+    <h2>⚙️ Configuración</h2>
+    <p>La clave API de Anthropic es necesaria cuando juegas en local, desktop o móvil sin servidor propio.</p>
+    <div class="settings-field">
+      <label>Clave API de Anthropic</label>
+      <input type="password" id="api-key-input" placeholder="sk-ant-...">
+      <small>Obtén tu clave gratis en <strong>console.anthropic.com</strong></small>
+    </div>
+    <div class="settings-save-row">
+      <button class="btn btn-gold btn-sm" onclick="saveApiKey()">Guardar</button>
+      <span class="key-status" id="key-status"></span>
+    </div>
+    <div class="notice" id="settings-notice"></div>
+
+    <div class="settings-field" style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(201,162,39,.2);">
+      <label>Modelo del Dungeon Master</label>
+      <div id="model-options" class="model-options"></div>
+      <small id="model-cost-note" style="display:block;margin-top:6px;"></small>
+    </div>
+
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(201,162,39,.2);">
+      <p style="color:rgba(244,232,193,.5);font-size:.78rem;">La clave se guarda localmente en tu dispositivo y no se envía a ningún servidor externo que no sea Anthropic. El modelo elegido afecta a la calidad de la narración y al coste por partida.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DOWNLOAD MODAL ===== -->
+<div class="modal-overlay" id="download-modal">
+  <div class="modal modal-rel" style="max-width:640px;">
+    <button class="close-btn" onclick="closeModal('download-modal')">✕</button>
+    <h2>📦 Descargar / Instalar</h2>
+    <p>El juego necesita una clave API de Anthropic (gratuita en <strong>console.anthropic.com</strong>). Elige tu plataforma:</p>
+
+    <div class="platform-grid">
+      <div class="plat-card">
+        <h4>🌐 Web / Local (ya disponible)</h4>
+        <p>Juega ahora mismo en el navegador. Para jugar en local en tu PC:</p>
+        <pre>git clone https://github.com/lord-jorx/fluffy-train
+cd fluffy-train
+npm install
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
+npm start</pre>
+        <p>Abre <code>http://localhost:3000</code></p>
+      </div>
+
+      <div class="plat-card">
+        <h4>🖥️ Windows / Linux / Steam Deck</h4>
+        <p>App de escritorio con Electron (no necesita navegador ni servidor separado):</p>
+        <pre>npm install
+# Windows (.exe):
+npm run build:win
+
+# Linux / Steam Deck (.AppImage):
+npm run build:linux</pre>
+        <p>El instalador aparece en <code>dist/</code>. En Steam Deck: añade el <code>.AppImage</code> como juego no-Steam.</p>
+      </div>
+
+      <div class="plat-card">
+        <h4>🤖 Android</h4>
+        <p>App nativa con Capacitor:</p>
+        <pre>npm install
+npx cap add android
+npx cap sync
+npx cap open android</pre>
+        <p>Necesitas Android Studio. La app pedirá tu clave API al iniciarse.</p>
+      </div>
+
+      <div class="plat-card">
+        <h4>🍎 iPhone / iPad</h4>
+        <p>App nativa con Capacitor (requiere Mac + Xcode):</p>
+        <pre>npm install
+npx cap add ios
+npx cap sync
+npx cap open ios</pre>
+        <p>La app pedirá tu clave API al iniciarse. Necesitas una cuenta de desarrollador Apple para instalar en dispositivo.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;background:rgba(0,0,0,.3);border-radius:5px;padding:12px;">
+      <p style="color:rgba(244,232,193,.7);font-size:.82rem;"><strong style="color:var(--gold);">Sobre la clave API:</strong> Anthropic ofrece créditos gratuitos al registrarte. El juego usa el modelo Claude Opus 4.8 — una sesión de juego típica cuesta unos pocos céntimos.</p>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ---- State ----
+let socket;
+let myPlayer = null;
+let currentStats = {};
+let pendingRoomId = null;
+let lastSuggestions = [];
+let currentAct = 1;
+
+// ---- Init socket ----
+function initSocket(apiKey) {
+  if (socket) socket.disconnect();
+  const auth = {};
+  if (apiKey) auth.apiKey = apiKey;
+  auth.model = getSavedModel();
+  socket = io({ auth });
+
+  socket.on('dm_message', onDmMessage);
+  socket.on('player_message', onPlayerMessage);
+  socket.on('dm_thinking', () => setThinking(true));
+  socket.on('dice_roll', onDiceRoll);
+  socket.on('room_state', (d) => { updateAct(d.act); if(d.storyTitle) setTitle(d.storyTitle); if(d.players) updatePlayers(d.players); });
+}
+
+// ---- Landing ----
+function toggleJoin() {
+  const b = document.getElementById('join-box');
+  b.style.display = b.style.display === 'flex' ? 'none' : 'flex';
+  if (b.style.display === 'flex') document.getElementById('room-input').focus();
+}
+
+function doCreateRoom() {
+  if (!socket) initSocket(getSavedKey());
+  socket.emit('create_room', (res) => {
+    pendingRoomId = res.roomId;
+    loadCharOptions().then(() => { rerollStats(); showScreen('char-creation'); });
+  });
+}
+
+function doJoin() {
+  const code = document.getElementById('room-input').value.trim().toUpperCase();
+  if (code.length < 5) { showNotice('land-notice','Ingresa un código de sala de 5 caracteres.'); return; }
+  if (!socket) initSocket(getSavedKey());
+  pendingRoomId = code;
+  loadCharOptions().then(() => { rerollStats(); showScreen('char-creation'); });
+}
+
+// ---- Character creation ----
+async function loadCharOptions() {
+  const [races, classes] = await Promise.all([
+    fetch('/api/races').then(r=>r.json()),
+    fetch('/api/classes').then(r=>r.json())
+  ]);
+  const re = document.getElementById('c-race');
+  const ce = document.getElementById('c-class');
+  re.innerHTML = '<option value="">— Elige raza —</option>' + races.map(r=>`<option>${r}</option>`).join('');
+  ce.innerHTML = '<option value="">— Elige clase —</option>' + classes.map(c=>`<option>${c}</option>`).join('');
+}
+
+async function rerollStats() {
+  const s = await fetch('/api/roll-stats').then(r=>r.json());
+  currentStats = s;
+  for (const [k,v] of Object.entries(s)) {
+    document.getElementById(`sv-${k}`).textContent = v;
+    const mod = Math.floor((v-10)/2);
+    document.getElementById(`sm-${k}`).textContent = (mod>=0?'+':'')+mod;
+  }
+}
+
+function doCreateChar() {
+  const name = document.getElementById('c-name').value.trim();
+  const race = document.getElementById('c-race').value;
+  const cls  = document.getElementById('c-class').value;
+  if (!name) { showNotice('char-notice','Escribe el nombre de tu personaje.'); return; }
+  if (!race) { showNotice('char-notice','Elige una raza.'); return; }
+  if (!cls)  { showNotice('char-notice','Elige una clase.'); return; }
+  if (!Object.keys(currentStats).length) { showNotice('char-notice','Tira los dados primero.'); return; }
+
+  if (!socket) initSocket(getSavedKey());
+
+  socket.emit('join_room', { roomId: pendingRoomId, character:{name,race,class:cls,stats:currentStats} }, (res) => {
+    if (res.error) { showNotice('char-notice', res.error); return; }
+    myPlayer = res.player;
+    document.getElementById('g-room').textContent = res.roomId;
+    updateInventory(myPlayer.inventory, myPlayer.gold);
+    showScreen('game-screen');
+    socket.emit('request_state');
+  });
+}
+
+// ---- Game events ----
+function doSend() {
+  const inp = document.getElementById('action-input');
+  const txt = inp.value.trim();
+  if (!txt || !socket) return;
+  socket.emit('player_action', { action: txt });
+  inp.value = '';
+  clearSuggestions();
+}
+
+function useSuggestion(txt) {
+  document.getElementById('action-input').value = txt;
+  document.getElementById('action-input').focus();
+}
+
+function rollFree(sides) {
+  const btn = event.currentTarget;
+  btn.classList.add('spin');
+  setTimeout(() => btn.classList.remove('spin'), 500);
+  if (socket) socket.emit('roll_dice', { sides });
+}
+
+// ---- Socket message handlers ----
+function onDmMessage(data) {
+  setThinking(false);
+  if (data.storyTitle) setTitle(data.storyTitle);
+  if (data.currentAct) updateAct(data.currentAct);
+  if (data.players) updatePlayers(data.players);
+
+  const typeMap = { narrative:'dm', ending:'dm', system:'system', error:'error' };
+  addMsg(typeMap[data.type]||'dm', 'Dungeon Master', data.text);
+
+  if (data.roll) addRoll(data.roll);
+  if (data.actChange) addMsg('system','','═══ ' + actName(data.actChange) + ' ═══');
+
+  if (data.suggestions?.length) showSuggestions(data.suggestions);
+  if (data.isEnding) showEnding(data.storyTitleFull, data.storySummary, data.text);
+}
+
+function onPlayerMessage(data) {
+  addMsg('player', data.player, data.text);
+}
+
+function onDiceRoll(data) {
+  const el = document.createElement('div');
+  el.className = 'free-roll';
+  el.textContent = `🎲 ${data.player} tira d${data.sides}: ${data.result}`;
+  insertBeforeThinking(el);
+  scrollLog();
+}
+
+// ---- DOM helpers ----
+function addMsg(type, author, text) {
+  const el = document.createElement('div');
+  el.className = `msg msg-${type}`;
+  const formatted = esc(text)
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g,'<em>$1</em>')
+    .replace(/\n/g,'<br>');
+  if (type === 'system' || type === 'error') {
+    el.innerHTML = `<div class="mb">${formatted}</div>`;
+  } else if (type === 'player') {
+    el.innerHTML = `<div class="mh">⚔️ ${esc(author)}</div><div class="mb">"${formatted}"</div>`;
+  } else {
+    el.innerHTML = `<div class="mh">📖 ${esc(author)}</div><div class="mb">${formatted}</div>`;
+  }
+  insertBeforeThinking(el);
+  scrollLog();
+}
+
+function addRoll(r) {
+  const el = document.createElement('div');
+  el.className = 'roll-card';
+  const outcome = r.success
+    ? `<span class="rs ok">¡ÉXITO!</span>`
+    : `<span class="rs fail">FALLO${r.damage?` (${r.damage} daño)`:''}</span>`;
+  el.innerHTML = `<div class="rt">🎲 ${esc(r.player)} — Tirada de ${r.stat}</div>
+    <div class="rd">d20(${r.die}) ${r.mod>=0?'+':''}${r.mod} = <strong>${r.total}</strong> vs DC ${r.dc} — ${outcome}</div>`;
+  insertBeforeThinking(el);
+  scrollLog();
+}
+
+function showSuggestions(list) {
+  lastSuggestions = list;
+  const el = document.getElementById('suggestions');
+  el.innerHTML = list.map(s =>
+    `<button class="sug-btn" onclick="useSuggestion('${esc(s).replace(/'/g,"&#39;")}')">${esc(s)}</button>`
+  ).join('');
+}
+
+function clearSuggestions() { document.getElementById('suggestions').innerHTML = ''; }
+
+function updatePlayers(players) {
+  const list = document.getElementById('players-list');
+  list.innerHTML = players.map(p => {
+    const pct = Math.max(0, Math.round((p.hp/p.maxHp)*100));
+    return `<div class="pc-card">
+      <div class="pc-name">${esc(p.name)}</div>
+      <div class="pc-sub">${esc(p.race)} ${esc(p.class)}</div>
+      <div class="hp-bar-wrap">
+        <div class="hp-bar"><div class="hp-fill" style="width:${pct}%"></div></div>
+        <div class="hp-txt">HP ${p.hp}/${p.maxHp}</div>
+      </div>
+      <div class="mini-stats">
+        ${['FUE','DES','CON','INT','SAB','CAR'].map(k=>`<div class="ms">${k}<span>${p.stats[k]}</span></div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  const me = players.find(p => p.name === myPlayer?.name);
+  if (me) { myPlayer = me; updateInventory(me.inventory, me.gold); }
+}
+
+function updateInventory(items, gold) {
+  const el = document.getElementById('my-inventory');
+  el.innerHTML = items.map(i=>`<div class="inv-item">${esc(i)}</div>`).join('') +
+    `<div class="gold-txt">💰 ${gold} monedas de oro</div>`;
+}
+
+function updateAct(act) {
+  currentAct = act;
+  ['ap1','ap2','ap3','ap4'].forEach((id, i) => {
+    const pip = document.getElementById(id);
+    pip.className = 'act-pip' + (i+1 < act ? ' done' : i+1 === act ? ' active' : '');
+  });
+}
+
+function setTitle(title) {
+  document.getElementById('g-title').textContent = title;
+}
+
+function setThinking(on) { document.getElementById('thinking').className = 'thinking'+(on?' on':''); if(on)scrollLog(); }
+function scrollLog() { const l=document.getElementById('chat-log'); l.scrollTop=l.scrollHeight; }
+function insertBeforeThinking(el) { const log=document.getElementById('chat-log'); log.insertBefore(el,document.getElementById('thinking')); }
+
+// ---- Ending ----
+function showEnding(title, summary, epilogue) {
+  document.getElementById('ending-title').textContent = title || 'Una gran aventura';
+  document.getElementById('ending-summary').innerHTML = summary
+    ? `<em>"${esc(summary)}"</em><br><br>${esc(epilogue).replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}`
+    : esc(epilogue).replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+  document.getElementById('ending-overlay').classList.add('open');
+}
+
+function closeEnding() { document.getElementById('ending-overlay').classList.remove('open'); }
+function newAdventure() { closeEnding(); showScreen('landing'); if(socket){socket.disconnect();socket=null;} myPlayer=null; currentAct=1; }
+
+// ---- Modals ----
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+// ---- Settings ----
+function getSavedKey() { return localStorage.getItem('anthropic_api_key') || ''; }
+function getSavedModel() { return localStorage.getItem('dm_model') || 'claude-opus-4-8'; }
+
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (key) {
+    localStorage.setItem('anthropic_api_key', key);
+    document.getElementById('key-status').textContent = '✓ Guardada';
+    setTimeout(() => document.getElementById('key-status').textContent='', 2000);
+    if (socket) { socket.disconnect(); socket = null; initSocket(key); }
+    closeModal('settings-modal');
+  } else {
+    localStorage.removeItem('anthropic_api_key');
+    document.getElementById('key-status').textContent = 'Clave eliminada';
+  }
+}
+
+// ---- Model selector ----
+let availableModels = [];
+
+async function loadModels() {
+  try {
+    const data = await fetch('/api/models').then(r => r.json());
+    availableModels = data.models;
+  } catch {
+    availableModels = [{ id:'claude-opus-4-8', name:'Claude Opus 4.8', tier:'Mejor narrativa', cost:'Coste más alto' }];
+  }
+  renderModelOptions();
+}
+
+function renderModelOptions() {
+  const el = document.getElementById('model-options');
+  if (!el) return;
+  const current = getSavedModel();
+  el.innerHTML = availableModels.map(m => `
+    <div class="model-opt ${m.id === current ? 'selected' : ''}" data-model="${m.id}" onclick="selectModel('${m.id}')">
+      <div class="radio"></div>
+      <div class="model-info">
+        <div class="model-name">${esc(m.name)}</div>
+        <div class="model-meta">${esc(m.tier)} · ${esc(m.cost)}</div>
+      </div>
+    </div>`).join('');
+  updateCostNote(current);
+}
+
+function selectModel(id) {
+  localStorage.setItem('dm_model', id);
+  document.querySelectorAll('.model-opt').forEach(o => o.classList.toggle('selected', o.dataset.model === id));
+  updateCostNote(id);
+  if (socket) socket.emit('set_model', id);
+}
+
+function updateCostNote(id) {
+  const note = document.getElementById('model-cost-note');
+  if (!note) return;
+  const tips = {
+    'claude-opus-4-8':   'La narración más rica y coherente. Recomendado si la historia es lo primero.',
+    'claude-sonnet-4-6': 'Buen equilibrio entre calidad, velocidad y coste. Ideal para partidas largas.',
+    'claude-haiku-4-5':  'Respuestas rápidas y el menor coste. Perfecto para probar o jugar mucho.'
+  };
+  note.textContent = tips[id] || '';
+}
+
+// Load saved settings
+window.addEventListener('load', () => {
+  const k = getSavedKey();
+  if (k) document.getElementById('api-key-input').value = k;
+  loadModels();
+});
+
+// ---- Screens ----
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showNotice(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.classList.add('on');
+  setTimeout(() => el.classList.remove('on'), 4000);
+}
+
+function actName(n) { return ['','Acto I: Introducción','Acto II: Desarrollo','Acto III: Clímax','Acto IV: Epílogo'][n]||`Acto ${n}`; }
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
