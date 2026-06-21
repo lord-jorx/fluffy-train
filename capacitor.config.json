@@ -1,0 +1,20 @@
+{
+  "appId": "com.tabernadel.dragon",
+  "appName": "Taberna del Dragón",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "Preferences": {},
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#120800",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#120800"
+    }
+  }
+}
