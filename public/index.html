@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taberna del Dragón — D&D con DM Automático</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=IM+Fell+English:ital@0;1&display=swap');
+
+  :root {
+    --parchment: #f4e8c1;
+    --dark-parchment: #e8d49a;
+    --ink: #2c1810;
+    --blood: #8b1a1a;
+    --gold: #c9a227;
+    --shadow: rgba(44,24,16,0.7);
+    --wood: #3d1f0d;
+    --stone: #4a4a4a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a0d05;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(60,20,5,0.8) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 50%, rgba(60,20,5,0.8) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    color: var(--ink);
+    font-family: 'Crimson Text', serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ======= SCREENS ======= */
+  .screen { display: none; width: 100%; max-width: 1000px; padding: 20px; }
+  .screen.active { display: block; }
+
+  /* ======= LANDING ======= */
+  #landing {
+    text-align: center;
+    animation: fadeIn 1s ease;
+  }
+
+  .tavern-sign {
+    background: var(--wood);
+    border: 4px solid var(--gold);
+    border-radius: 8px;
+    padding: 40px;
+    margin: 0 auto 30px;
+    max-width: 600px;
+    box-shadow: 0 0 40px rgba(201,162,39,0.3), inset 0 0 20px rgba(0,0,0,0.5);
+    position: relative;
+  }
+
+  .tavern-sign::before, .tavern-sign::after {
+    content: '🐉';
+    position: absolute;
+    font-size: 2rem;
+    top: -10px;
+  }
+  .tavern-sign::before { left: 20px; }
+  .tavern-sign::after { right: 20px; }
+
+  .title-main {
+    font-family: 'IM Fell English', serif;
+    font-size: 3rem;
+    color: var(--gold);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    line-height: 1.1;
+  }
+
+  .title-sub {
+    font-family: 'Crimson Text', serif;
+    font-style: italic;
+    color: var(--dark-parchment);
+    font-size: 1.2rem;
+    margin-top: 8px;
+  }
+
+  .tagline {
+    color: var(--parchment);
+    font-size: 1.1rem;
+    margin: 20px 0;
+    font-style: italic;
+    opacity: 0.8;
+  }
+
+  .btn {
+    background: linear-gradient(135deg, var(--gold), #a07820);
+    border: 2px solid #8b6914;
+    color: var(--wood);
+    font-family: 'IM Fell English', serif;
+    font-size: 1.1rem;
+    padding: 12px 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 8px;
+    transition: all 0.2s;
+    text-shadow: none;
+    letter-spacing: 0.5px;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(201,162,39,0.4); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-secondary {
+    background: linear-gradient(135deg, #5a3010, #3d1f0d);
+    border-color: #8b5a2b;
+    color: var(--parchment);
+  }
+
+  .room-input-group {
+    display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px;
+  }
+
+  input[type="text"], select {
+    background: var(--dark-parchment);
+    border: 2px solid #8b6914;
+    color: var(--ink);
+    font-family: 'Crimson Text', serif;
+    font-size: 1rem;
+    padding: 10px 14px;
+    border-radius: 4px;
+    outline: none;
+    min-width: 120px;
+  }
+  input[type="text"]:focus, select:focus { border-color: var(--gold); }
+
+  /* ======= CHARACTER CREATION ======= */
+  #char-creation {
+    animation: fadeIn 0.5s ease;
+  }
+
+  .parchment-panel {
+    background: var(--parchment);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23f4e8c1'/%3E%3Crect width='1' height='1' fill='%23e8d8a0' opacity='0.3'/%3E%3C/svg%3E");
+    border: 3px solid var(--gold);
+    border-radius: 6px;
+    padding: 30px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5), inset 0 0 40px rgba(201,162,39,0.05);
+    position: relative;
+  }
+
+  .panel-title {
+    font-family: 'IM Fell English', serif;
+    font-size: 1.8rem;
+    color: var(--blood);
+    text-align: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--gold);
+    padding-bottom: 10px;
+  }
+
+  .char-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .field-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--blood);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .field-group input, .field-group select { width: 100%; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin: 15px 0;
+  }
+
+  .stat-box {
+    background: var(--wood);
+    border: 2px solid var(--gold);
+    border-radius: 4px;
+    text-align: center;
+    padding: 8px 4px;
+    color: var(--parchment);
+  }
+
+  .stat-box .stat-name { font-size: 0.65rem; letter-spacing: 1px; color: var(--dark-parchment); }
+  .stat-box .stat-val { font-size: 1.5rem; font-weight: 700; color: var(--gold); }
+  .stat-box .stat-mod { font-size: 0.75rem; color: #a0c0a0; }
+
+  /* ======= GAME SCREEN ======= */
+  #game-screen {
+    max-width: 1200px;
+    height: 100vh;
+    display: none;
+    flex-direction: column;
+    padding: 10px;
+  }
+  #game-screen.active { display: flex; }
+
+  .game-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+    height: 100%;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    grid-row: 1 / 4;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sidebar-panel {
+    background: rgba(20, 10, 3, 0.9);
+    border: 2px solid var(--gold);
+    border-radius: 6px;
+    padding: 12px;
+    color: var(--parchment);
+  }
+
+  .sidebar-panel h3 {
+    font-family: 'IM Fell English', serif;
+    color: var(--gold);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(201,162,39,0.3);
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+
+  .player-card {
+    margin-bottom: 8px;
+    padding: 8px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px;
+    border-left: 3px solid var(--gold);
+  }
+
+  .player-card .pc-name { font-weight: 600; color: var(--gold); font-size: 0.95rem; }
+  .player-card .pc-class { font-size: 0.8rem; color: #bbb; font-style: italic; }
+
+  .hp-bar-wrap { margin-top: 5px; }
+  .hp-bar { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+  .hp-fill { height: 100%; background: linear-gradient(90deg, #8b1a1a, #c0392b); border-radius: 4px; transition: width 0.5s; }
+  .hp-text { font-size: 0.75rem; color: #ccc; margin-top: 2px; }
+
+  .mini-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+    margin-top: 5px;
+    font-size: 0.7rem;
+  }
+  .mini-stat { text-align: center; color: #aaa; }
+  .mini-stat span { display: block; color: var(--gold); font-weight: 600; }
+
+  /* Header bar */
+  .game-header {
+    grid-column: 2;
+    background: rgba(20,10,3,0.9);
+    border: 2px solid var(--gold);
+    border-radius: 6px;
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .room-badge {
+    font-family: 'IM Fell English', serif;
+    color: var(--gold);
+    font-size: 0.9rem;
+  }
+
+  .dice-row { display: flex; gap: 6px; }
+  .dice-btn {
+    background: var(--wood);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'IM Fell English', serif;
+    transition: all 0.15s;
+  }
+  .dice-btn:hover { background: var(--gold); color: var(--wood); }
+
+  /* Chat log */
+  .chat-log {
+    grid-column: 2;
+    background: rgba(10,5,0,0.95);
+    border: 2px solid rgba(201,162,39,0.4);
+    border-radius: 6px;
+    overflow-y: auto;
+    padding: 15px;
+    scroll-behavior: smooth;
+  }
+
+  .msg { margin-bottom: 14px; animation: msgIn 0.3s ease; }
+
+  .msg-dm .msg-header { color: var(--blood); font-size: 0.8rem; font-weight: 600; margin-bottom: 3px; }
+  .msg-dm .msg-body { color: var(--parchment); font-size: 1rem; line-height: 1.6; }
+  .msg-dm .msg-body strong { color: var(--gold); }
+
+  .msg-player .msg-header { color: #7a9; font-size: 0.8rem; margin-bottom: 3px; }
+  .msg-player .msg-body { color: #cde; font-style: italic; }
+
+  .msg-roll {
+    background: rgba(201,162,39,0.08);
+    border: 1px solid rgba(201,162,39,0.3);
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    animation: msgIn 0.3s ease;
+  }
+  .roll-result { font-family: 'IM Fell English', serif; color: var(--gold); font-size: 1.1rem; }
+  .roll-detail { font-size: 0.8rem; color: #bbb; margin-top: 2px; }
+  .roll-success { color: #5c9; font-weight: 600; }
+  .roll-fail { color: var(--blood); font-weight: 600; }
+
+  .msg-system .msg-body { color: #888; font-size: 0.85rem; font-style: italic; text-align: center; }
+  .msg-danger .msg-body { color: var(--blood); font-weight: 600; }
+
+  .thinking-dots {
+    display: none;
+    padding: 10px;
+    color: var(--gold);
+    font-style: italic;
+    font-size: 0.9rem;
+    animation: pulse 1.5s infinite;
+  }
+  .thinking-dots.active { display: block; }
+
+  /* Input area */
+  .input-area {
+    grid-column: 2;
+    display: flex;
+    gap: 8px;
+  }
+
+  #action-input {
+    flex: 1;
+    background: rgba(20,10,3,0.9);
+    border: 2px solid rgba(201,162,39,0.4);
+    color: var(--parchment);
+    font-family: 'Crimson Text', serif;
+    font-size: 1rem;
+    padding: 10px 14px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  #action-input:focus { border-color: var(--gold); }
+  #action-input::placeholder { color: rgba(244,232,193,0.4); font-style: italic; }
+
+  #send-btn {
+    background: linear-gradient(135deg, var(--blood), #6b1414);
+    border: 2px solid #8b1a1a;
+    color: var(--parchment);
+    font-family: 'IM Fell English', serif;
+    font-size: 1rem;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  #send-btn:hover { background: linear-gradient(135deg, #a01a1a, #8b1414); }
+
+  /* Error/notice */
+  .notice {
+    background: rgba(139,26,26,0.2);
+    border: 1px solid var(--blood);
+    border-radius: 4px;
+    padding: 8px 12px;
+    color: #e88;
+    font-size: 0.9rem;
+    margin-top: 8px;
+    display: none;
+  }
+  .notice.show { display: block; }
+
+  /* Animations */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes msgIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+  @keyframes diceRoll { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.3); } 100% { transform: rotate(360deg) scale(1); } }
+
+  .dice-anim { animation: diceRoll 0.6s ease; }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .game-layout { grid-template-columns: 1fr; }
+    .sidebar { grid-row: auto; flex-direction: row; overflow-x: auto; }
+    .game-header { grid-column: 1; }
+    .chat-log { grid-column: 1; }
+    .input-area { grid-column: 1; }
+    .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    .char-grid { grid-template-columns: 1fr; }
+  }
+
+  .gold { color: var(--gold); }
+  .scroll-fade { position: relative; }
+</style>
+</head>
+<body>
+
+<!-- LANDING -->
+<div id="landing" class="screen active">
+  <div class="tavern-sign">
+    <div class="title-main">Taberna del Dragón</div>
+    <div class="title-sub">Aventuras de D&D con Dungeon Master Automático</div>
+  </div>
+  <p class="tagline">Para 1 o más jugadores • Historia generada por IA • Gratis</p>
+  <div style="margin-top:30px;">
+    <button class="btn" onclick="showCreateRoom()">⚔️ Nueva Aventura</button>
+    <button class="btn btn-secondary" onclick="showJoinRoom()">🍺 Unirse a Sala</button>
+  </div>
+  <div id="join-section" style="display:none; margin-top:20px;">
+    <div class="room-input-group">
+      <input type="text" id="room-code-input" placeholder="Código de sala (ej: AB3CD)" maxlength="5" style="text-transform:uppercase; letter-spacing:3px; font-size:1.2rem; text-align:center;">
+      <button class="btn" onclick="proceedToChar(null)">Entrar</button>
+    </div>
+  </div>
+  <div id="landing-notice" class="notice"></div>
+</div>
+
+<!-- CHARACTER CREATION -->
+<div id="char-creation" class="screen">
+  <div class="parchment-panel">
+    <div class="panel-title">⚔️ Crea tu Personaje</div>
+    <div class="char-grid">
+      <div class="field-group">
+        <label>Nombre del Héroe</label>
+        <input type="text" id="char-name" placeholder="Ej: Aldric el Valiente" maxlength="30">
+      </div>
+      <div class="field-group">
+        <label>Raza</label>
+        <select id="char-race">
+          <option value="">-- Elige raza --</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Clase</label>
+        <select id="char-class">
+          <option value="">-- Elige clase --</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin: 15px 0;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <label style="font-weight:600; color:var(--blood); text-transform:uppercase; font-size:0.9rem;">Atributos</label>
+        <button class="btn btn-secondary" onclick="rerollStats()" style="padding:5px 14px; font-size:0.85rem;">🎲 Tirar Dados</button>
+      </div>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-box"><div class="stat-name">FUE</div><div class="stat-val" id="s-FUE">—</div><div class="stat-mod" id="m-FUE"></div></div>
+        <div class="stat-box"><div class="stat-name">DES</div><div class="stat-val" id="s-DES">—</div><div class="stat-mod" id="m-DES"></div></div>
+        <div class="stat-box"><div class="stat-name">CON</div><div class="stat-val" id="s-CON">—</div><div class="stat-mod" id="m-CON"></div></div>
+        <div class="stat-box"><div class="stat-name">INT</div><div class="stat-val" id="s-INT">—</div><div class="stat-mod" id="m-INT"></div></div>
+        <div class="stat-box"><div class="stat-name">SAB</div><div class="stat-val" id="s-SAB">—</div><div class="stat-mod" id="m-SAB"></div></div>
+        <div class="stat-box"><div class="stat-name">CAR</div><div class="stat-val" id="s-CAR">—</div><div class="stat-mod" id="m-CAR"></div></div>
+      </div>
+    </div>
+
+    <p style="font-size:0.85rem; color:#666; font-style:italic; text-align:center; margin-bottom:15px;">Los atributos se generan con 4d6, descartando el menor.</p>
+
+    <div style="text-align:center;">
+      <button class="btn" onclick="createCharacter()">🗡️ Entrar a la Taberna</button>
+      <button class="btn btn-secondary" onclick="goBack()">← Volver</button>
+    </div>
+    <div id="char-notice" class="notice"></div>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen" class="screen">
+  <div class="game-layout">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-panel">
+        <h3>🧙 Aventureros</h3>
+        <div id="players-list"></div>
+      </div>
+      <div class="sidebar-panel" id="my-inventory-panel">
+        <h3>🎒 Inventario</h3>
+        <div id="my-inventory" style="font-size:0.85rem; line-height:1.8;"></div>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="game-header">
+      <div class="room-badge">🏰 Sala: <span id="room-display" class="gold"></span></div>
+      <div class="dice-row">
+        <span style="color:#aaa; font-size:0.8rem; margin-right:4px;">Dados:</span>
+        <button class="dice-btn" onclick="rollDice(4)">d4</button>
+        <button class="dice-btn" onclick="rollDice(6)">d6</button>
+        <button class="dice-btn" onclick="rollDice(8)">d8</button>
+        <button class="dice-btn" onclick="rollDice(10)">d10</button>
+        <button class="dice-btn" onclick="rollDice(12)">d12</button>
+        <button class="dice-btn" onclick="rollDice(20)">d20</button>
+      </div>
+    </div>
+
+    <!-- Chat log -->
+    <div class="chat-log" id="chat-log">
+      <div class="thinking-dots" id="thinking">⚔️ El Dungeon Master está narrando...</div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-area">
+      <input type="text" id="action-input" placeholder="¿Qué hace tu personaje? (Ej: Inspecciono la puerta secreta)" maxlength="300" onkeydown="if(event.key==='Enter') sendAction()">
+      <button id="send-btn" onclick="sendAction()">⚔️ Actuar</button>
+    </div>
+
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let currentStats = {};
+let pendingRoomId = null;
+let myPlayer = null;
+
+// ---- Navigation ----
+function showCreateRoom() {
+  socket.emit('create_room', (res) => {
+    pendingRoomId = res.roomId;
+    showScreen('char-creation');
+    loadCharOptions();
+    rerollStats();
+  });
+}
+
+function showJoinRoom() {
+  document.getElementById('join-section').style.display = 'block';
+}
+
+function proceedToChar(roomId) {
+  const code = roomId || document.getElementById('room-code-input').value.trim().toUpperCase();
+  if (!code || code.length < 5) { showNotice('landing-notice', 'Ingresa un código de sala válido.'); return; }
+  pendingRoomId = code;
+  showScreen('char-creation');
+  loadCharOptions();
+  rerollStats();
+}
+
+function goBack() { showScreen('landing'); }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ---- Char creation ----
+async function loadCharOptions() {
+  const [races, classes] = await Promise.all([
+    fetch('/api/races').then(r => r.json()),
+    fetch('/api/classes').then(r => r.json())
+  ]);
+  const raceEl = document.getElementById('char-race');
+  const classEl = document.getElementById('char-class');
+  raceEl.innerHTML = '<option value="">-- Elige raza --</option>' + races.map(r => `<option>${r}</option>`).join('');
+  classEl.innerHTML = '<option value="">-- Elige clase --</option>' + classes.map(c => `<option>${c}</option>`).join('');
+}
+
+async function rerollStats() {
+  const stats = await fetch('/api/roll-stats').then(r => r.json());
+  currentStats = stats;
+  for (const [k, v] of Object.entries(stats)) {
+    document.getElementById(`s-${k}`).textContent = v;
+    const mod = Math.floor((v - 10) / 2);
+    document.getElementById(`m-${k}`).textContent = (mod >= 0 ? '+' : '') + mod;
+  }
+}
+
+function createCharacter() {
+  const name = document.getElementById('char-name').value.trim();
+  const race = document.getElementById('char-race').value;
+  const cls = document.getElementById('char-class').value;
+  if (!name) { showNotice('char-notice', 'Escribe el nombre de tu personaje.'); return; }
+  if (!race) { showNotice('char-notice', 'Elige una raza.'); return; }
+  if (!cls) { showNotice('char-notice', 'Elige una clase.'); return; }
+  if (!Object.keys(currentStats).length) { showNotice('char-notice', 'Tira los dados primero.'); return; }
+
+  socket.emit('join_room', {
+    roomId: pendingRoomId,
+    character: { name, race, class: cls, stats: currentStats }
+  }, (res) => {
+    if (res.error) { showNotice('char-notice', res.error); return; }
+    myPlayer = res.player;
+    document.getElementById('room-display').textContent = res.roomId;
+    showScreen('game-screen');
+    updateInventory(myPlayer.inventory, myPlayer.gold);
+  });
+}
+
+// ---- Game actions ----
+function sendAction() {
+  const input = document.getElementById('action-input');
+  const text = input.value.trim();
+  if (!text) return;
+  socket.emit('player_action', { action: text });
+  input.value = '';
+}
+
+function rollDice(sides) {
+  const btn = event.target;
+  btn.classList.add('dice-anim');
+  setTimeout(() => btn.classList.remove('dice-anim'), 600);
+  socket.emit('roll_dice', { sides });
+}
+
+// ---- Socket events ----
+socket.on('dm_message', (data) => {
+  hideThinking();
+  appendDMMessage(data.text, data.type || 'narrative');
+  if (data.roll) appendRoll(data.roll);
+  if (data.players) updatePlayers(data.players);
+});
+
+socket.on('player_message', (data) => {
+  appendPlayerMessage(data.player, data.text);
+});
+
+socket.on('dm_thinking', () => showThinking());
+
+socket.on('dice_roll', (data) => {
+  appendRollFree(data);
+});
+
+// ---- DOM helpers ----
+function appendDMMessage(text, type) {
+  const log = document.getElementById('chat-log');
+  const div = document.createElement('div');
+  div.className = `msg msg-dm msg-${type}`;
+  const formatted = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+  div.innerHTML = `<div class="msg-header">📖 Dungeon Master</div><div class="msg-body">${formatted}</div>`;
+  insertBeforeThinking(div);
+  scrollLog();
+}
+
+function appendPlayerMessage(player, text) {
+  const log = document.getElementById('chat-log');
+  const div = document.createElement('div');
+  div.className = 'msg msg-player';
+  div.innerHTML = `<div class="msg-header">⚔️ ${escHtml(player)}</div><div class="msg-body">"${escHtml(text)}"</div>`;
+  insertBeforeThinking(div);
+  scrollLog();
+}
+
+function appendRoll(roll) {
+  const log = document.getElementById('chat-log');
+  const div = document.createElement('div');
+  div.className = 'msg-roll';
+  const outcome = roll.success
+    ? `<span class="roll-success">¡ÉXITO!</span>`
+    : `<span class="roll-fail">FALLO</span>`;
+  div.innerHTML = `
+    <div class="roll-result">🎲 ${escHtml(roll.player)} tira ${roll.dice}</div>
+    <div class="roll-detail">${roll.stat}: ${roll.result} + ${roll.mod >= 0 ? '+' : ''}${roll.mod} = <strong>${roll.total}</strong> vs DC ${roll.dc} — ${outcome}</div>`;
+  insertBeforeThinking(div);
+  scrollLog();
+}
+
+function appendRollFree(data) {
+  const log = document.getElementById('chat-log');
+  const div = document.createElement('div');
+  div.className = 'msg-roll';
+  div.innerHTML = `<div class="roll-result">🎲 ${escHtml(data.player)} tira d${data.sides}: <strong>${data.result}</strong></div>`;
+  insertBeforeThinking(div);
+  scrollLog();
+}
+
+function updatePlayers(players) {
+  const list = document.getElementById('players-list');
+  list.innerHTML = players.map(p => {
+    const pct = Math.max(0, Math.round((p.hp / p.maxHp) * 100));
+    return `<div class="player-card">
+      <div class="pc-name">${escHtml(p.name)}</div>
+      <div class="pc-class">${p.race} ${p.class}</div>
+      <div class="hp-bar-wrap">
+        <div class="hp-bar"><div class="hp-fill" style="width:${pct}%"></div></div>
+        <div class="hp-text">HP: ${p.hp}/${p.maxHp}</div>
+      </div>
+      <div class="mini-stats">
+        ${['FUE','DES','CON','INT','SAB','CAR'].map(s => `<div class="mini-stat">${s}<span>${p.stats[s]}</span></div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  const me = players.find(p => p.name === (myPlayer && myPlayer.name));
+  if (me) { myPlayer = me; updateInventory(me.inventory, me.gold); }
+}
+
+function updateInventory(items, gold) {
+  const el = document.getElementById('my-inventory');
+  const lines = items.map(i => `• ${escHtml(i)}`).join('<br>');
+  el.innerHTML = `${lines}<br><br><span style="color:var(--gold);">💰 ${gold} monedas de oro</span>`;
+}
+
+function showThinking() { document.getElementById('thinking').classList.add('active'); scrollLog(); }
+function hideThinking() { document.getElementById('thinking').classList.remove('active'); }
+function scrollLog() { const l = document.getElementById('chat-log'); l.scrollTop = l.scrollHeight; }
+
+function insertBeforeThinking(el) {
+  const log = document.getElementById('chat-log');
+  const thinking = document.getElementById('thinking');
+  log.insertBefore(el, thinking);
+}
+
+function showNotice(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
