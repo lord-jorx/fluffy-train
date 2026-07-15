@@ -46,6 +46,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   const mode = {
     mock: 'DEMO (MOCK=1 — canned responses)',
+    local: `LIVE via OpenAI-compatible server at ${process.env.LLM_BASE_URL} (model: ${process.env.LLM_MODEL || 'llama3.1'})`,
     api: 'LIVE via Claude API (ANTHROPIC_API_KEY — works with free starter credits)',
     'claude-code': 'LIVE via Claude Code login (Pro/Max subscription, no API key)',
   }[pickBackend()];
