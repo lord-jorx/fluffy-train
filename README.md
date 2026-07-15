@@ -87,6 +87,51 @@ Want to try the UI without spending any usage? Demo mode streams canned response
 npm run dev   # MOCK=1
 ```
 
+## Install as an app (desktop & mobile)
+
+War Table is a **PWA**, so it installs as a real app — its own window, icon and
+splash — on all five platforms from a single codebase. The AI backend (Ollama /
+Claude / API) always runs on the computer that serves the app; phones connect to
+it over your Wi-Fi.
+
+### 🖥️ Windows · macOS · Linux
+
+Two options:
+
+- **Install the PWA (quickest):** run `npm start`, open `http://localhost:3000`
+  in Chrome or Edge, and click the **Install** icon in the address bar. You get a
+  standalone windowed app in your Start menu / Launchpad / app grid.
+- **Native desktop app (no browser, no terminal):** package it with Electron —
+  it bundles the server and everything else into a single installer:
+  ```bash
+  cd desktop
+  npm install
+  npm run dist        # or dist:win / dist:mac / dist:linux
+  # installers land in desktop/dist/  (.exe / .dmg / .AppImage · .deb)
+  ```
+  During development, `npm start` inside `desktop/` launches the app directly.
+  > Each installer is built **on its own OS** (Windows `.exe` on Windows, `.dmg`
+  > on macOS, etc.), or all three from CI — that's an Electron/electron-builder
+  > requirement, not a limitation of this app.
+
+### 📱 Android · iOS
+
+The phone runs the app in installed/full-screen mode; the debate itself runs on
+your computer's backend.
+
+1. On your computer: `npm start` (it prints a `http://192.168.x.x:3000` URL for your phone).
+2. On the phone (same Wi-Fi), open that URL:
+   - **Android (Chrome):** menu → **Add to Home screen / Install app**.
+   - **iOS (Safari):** Share → **Add to Home Screen**.
+3. Launch it from the home-screen icon — full screen, no browser chrome.
+
+> **Note on mobile install:** iOS "Add to Home Screen" works over plain Wi-Fi
+> (`http://`). Android's full *Install* prompt needs HTTPS or `localhost`; over a
+> plain LAN address it still adds a home-screen shortcut. For a first-class
+> install prompt on Android, put the app behind HTTPS — e.g. a quick tunnel
+> (`cloudflared tunnel --url http://localhost:3000`) or any reverse proxy with a
+> certificate.
+
 ## Configuration
 
 | Env var | Purpose |

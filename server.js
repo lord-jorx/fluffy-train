@@ -1,4 +1,5 @@
 import express from 'express';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runDebate, pickBackend } from './lib/debate.js';
@@ -42,13 +43,30 @@ app.post('/api/debate', async (req, res) => {
   res.end();
 });
 
+function lanUrls(port) {
+  const urls = [];
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] || []) {
+      if (net.family === 'IPv4' && !net.internal) urls.push(`http://${net.address}:${port}`);
+    }
+  }
+  return urls;
+}
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+// Bind on all interfaces so a phone on the same Wi-Fi can open the app.
+app.listen(PORT, '0.0.0.0', () => {
   const mode = {
     mock: 'DEMO (MOCK=1 — canned responses)',
     local: `LIVE via OpenAI-compatible server at ${process.env.LLM_BASE_URL} (model: ${process.env.LLM_MODEL || 'llama3.1'})`,
     api: 'LIVE via Claude API (ANTHROPIC_API_KEY — works with free starter credits)',
     'claude-code': 'LIVE via Claude Code login (Pro/Max subscription, no API key)',
   }[pickBackend()];
-  console.log(`War Table listening on http://localhost:${PORT} — mode: ${mode}`);
+  console.log(`\n  ⚔️  War Table — mode: ${mode}\n`);
+  console.log(`     On this computer:  http://localhost:${PORT}`);
+  for (const url of lanUrls(PORT)) {
+    console.log(`     On your phone:     ${url}   (same Wi-Fi → Add to Home Screen)`);
+  }
+  console.log('');
 });
