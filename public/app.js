@@ -91,7 +91,7 @@ function handleEvent(ev) {
       debaters = ev.debaters;
       if (ev.mock) {
         modeBadge.hidden = false;
-        modeBadge.textContent = 'Demo mode — set ANTHROPIC_API_KEY on the server for a live debate.';
+        modeBadge.textContent = 'Demo mode (MOCK=1) — start the server without it to debate on your Claude subscription.';
       }
       for (const d of ev.debaters) {
         panelStrip.insertAdjacentHTML(

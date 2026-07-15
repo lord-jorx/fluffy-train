@@ -45,8 +45,8 @@ app.post('/api/debate', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   const mode =
-    process.env.MOCK === '1' || !(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN)
-      ? 'DEMO (no API key — canned responses)'
-      : 'LIVE (Claude API)';
+    process.env.MOCK === '1'
+      ? 'DEMO (MOCK=1 — canned responses)'
+      : 'LIVE (Claude Code login — Pro/Max subscription, no API key)';
   console.log(`War Table listening on http://localhost:${PORT} — mode: ${mode}`);
 });
