@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runDebate } from './lib/debate.js';
+import { runDebate, pickBackend } from './lib/debate.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -44,9 +44,10 @@ app.post('/api/debate', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  const mode =
-    process.env.MOCK === '1'
-      ? 'DEMO (MOCK=1 — canned responses)'
-      : 'LIVE (Claude Code login — Pro/Max subscription, no API key)';
+  const mode = {
+    mock: 'DEMO (MOCK=1 — canned responses)',
+    api: 'LIVE via Claude API (ANTHROPIC_API_KEY — works with free starter credits)',
+    'claude-code': 'LIVE via Claude Code login (Pro/Max subscription, no API key)',
+  }[pickBackend()];
   console.log(`War Table listening on http://localhost:${PORT} — mode: ${mode}`);
 });

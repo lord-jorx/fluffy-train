@@ -2,7 +2,10 @@
 
 Five Claude personas debate your toughest decisions across three rounds and deliver a verdict.
 
-An **unofficial replica of [wartable.co](https://wartable.co/)** for personal use that runs on your **Claude Pro/Max subscription** — no API key, no per-token billing. It uses the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk), which authenticates through your existing Claude Code login.
+An **unofficial replica of [wartable.co](https://wartable.co/)** for personal use, with two ways to run — auto-detected at startup:
+
+1. **With a Claude Pro/Max subscription** (no API key): uses the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk), which authenticates through your existing Claude Code login.
+2. **Without any subscription**: set `ANTHROPIC_API_KEY` and it uses the Claude API directly. A new [console.anthropic.com](https://console.anthropic.com) account comes with free starter credits — enough for a good number of debates. (Claude Code itself is not available on free claude.ai accounts, so this is the no-subscription path.)
 
 The panel is five personas, each arguing from its own angle:
 
@@ -30,15 +33,24 @@ Everything streams live to the browser over Server-Sent Events. Each turn is a t
 ## Requirements
 
 - Node.js 18+
-- [Claude Code](https://claude.com/claude-code) installed and logged in with your Pro/Max account (run `claude` once and `/login` if you haven't)
+- **Either** [Claude Code](https://claude.com/claude-code) logged in with a Pro/Max account (run `claude` once and `/login`), **or** an `ANTHROPIC_API_KEY` from console.anthropic.com (free starter credits included on new accounts)
 
 ## Run it
 
 ```bash
 npm install
+
+# Option A — Pro/Max subscription (Claude Code login, no key):
 npm start
+
+# Option B — no subscription (API key + free starter credits):
+export ANTHROPIC_API_KEY=sk-ant-...
+npm start
+
 # open http://localhost:3000
 ```
+
+If `ANTHROPIC_API_KEY` is set it wins; unset it to use your subscription login.
 
 Want to try the UI without spending any usage? Demo mode streams canned responses:
 
@@ -50,7 +62,8 @@ npm run dev   # MOCK=1
 
 | Env var | Purpose |
 |---|---|
-| `DEBATER_MODELS` | Comma-separated list of up to 5 models to override the panel. Accepts Claude Code aliases (`opus`, `sonnet`, `haiku`) or full model IDs. E.g. `DEBATER_MODELS=opus,opus,sonnet,sonnet,haiku` |
+| `ANTHROPIC_API_KEY` | Switches to the Claude API backend (the no-subscription path). |
+| `DEBATER_MODELS` | Comma-separated list of up to 5 models to override the panel. Accepts aliases (`opus`, `sonnet`, `haiku`) or full model IDs; aliases map to current models on the API backend. E.g. `DEBATER_MODELS=opus,opus,sonnet,sonnet,haiku` |
 | `JUDGE_MODEL` | Model for the Arbiter (default `sonnet`; `opus` recommended on Max). |
 | `DEBATE_CONCURRENCY` | How many panelists speak at once (default 3). Lower it if you hit plan limits. |
 | `MOCK=1` | Demo mode — canned responses, no Claude usage. |
@@ -59,5 +72,7 @@ npm run dev   # MOCK=1
 ## Notes
 
 - Debaters answer in the language the question was asked in.
-- One full debate = 16 messages (15 turns + verdict) against your plan's usage limits. If you hit a limit mid-debate, the affected panelist shows an error and the debate continues without them.
-- Personal use on your own subscription. Not affiliated with wartable.co — a functional homage built for learning purposes.
+- One full debate = 16 messages (15 turns + verdict) against your plan's usage limits or API credits. If you hit a limit mid-debate, the affected panelist shows an error and the debate continues without them.
+- On the API backend a full sonnet/haiku debate costs a few cents, so the free starter credits go a long way. On very tight credits, run `DEBATER_MODELS=haiku,haiku,haiku,haiku,haiku JUDGE_MODEL=haiku`.
+- Personal use on your own account — don't share your login or key with others; that's against Anthropic's usage policy.
+- Not affiliated with wartable.co — a functional homage built for learning purposes.
