@@ -1,0 +1,52 @@
+import express from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { runDebate } from './lib/debate.js';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const app = express();
+
+app.use(express.json({ limit: '32kb' }));
+app.use(express.static(path.join(here, 'public')));
+
+app.post('/api/debate', async (req, res) => {
+  const question = (req.body?.question || '').trim();
+  if (!question) {
+    return res.status(400).json({ error: 'question is required' });
+  }
+  if (question.length > 2000) {
+    return res.status(400).json({ error: 'question is too long (max 2000 characters)' });
+  }
+
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  res.flushHeaders();
+
+  let closed = false;
+  res.on('close', () => { closed = true; });
+
+  const emit = (event) => {
+    if (closed) return;
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+  };
+
+  try {
+    await runDebate(question, emit);
+  } catch (err) {
+    emit({ type: 'error', message: err?.message || 'debate failed' });
+  }
+  res.end();
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  const mode =
+    process.env.MOCK === '1' || !(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN)
+      ? 'DEMO (no API key — canned responses)'
+      : 'LIVE (Claude API)';
+  console.log(`War Table listening on http://localhost:${PORT} — mode: ${mode}`);
+});

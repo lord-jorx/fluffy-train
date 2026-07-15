@@ -1,0 +1,18 @@
+{
+  "name": "war-table-claude",
+  "version": "1.0.0",
+  "description": "Five Claude models debate your toughest decisions across three rounds and deliver a verdict. Unofficial replica of wartable.co built entirely on the Claude API.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "MOCK=1 node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "express": "^4.19.2"
+  }
+}

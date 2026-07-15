@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>War Table — Five Claudes debate your toughest decisions</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>" />
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="kicker">An unofficial wartable.co replica — powered entirely by Claude</p>
+      <h1>War <span class="accent">Table</span></h1>
+      <p class="sub">
+        Five Claude models. Three rounds. One verdict.<br />
+        Convene the table, force them to challenge each other, and get an answer you can actually defend.
+      </p>
+      <form id="ask-form" class="ask">
+        <textarea
+          id="question"
+          rows="3"
+          maxlength="2000"
+          placeholder="Should I quit my job to start a company? Should we rewrite the backend in Rust? Ask anything you're stuck on…"
+          required
+        ></textarea>
+        <button id="convene" type="submit">⚔️ Convene the table</button>
+      </form>
+      <p id="mode-badge" class="mode-badge" hidden></p>
+    </div>
+  </header>
+
+  <main id="arena" class="arena" hidden>
+    <section class="panel-strip" id="panel-strip" aria-label="The panel"></section>
+    <section id="rounds"></section>
+    <section id="verdict-section" class="verdict" hidden>
+      <h2><span class="gavel">⚖︎</span> The Arbiter's verdict</h2>
+      <p class="judge-model" id="judge-model"></p>
+      <div id="verdict-body" class="verdict-body"></div>
+    </section>
+    <div class="again">
+      <button id="again-btn" type="button" hidden>Ask another question</button>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <p>
+      Built with the Claude API — Opus 4.8 · Opus 4.7 · Sonnet 5 · Sonnet 4.6 · Haiku 4.5.
+      Not affiliated with wartable.co.
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
