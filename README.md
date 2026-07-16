@@ -2,11 +2,14 @@
 
 Five Claude personas debate your toughest decisions across three rounds and deliver a verdict.
 
-An **unofficial replica of [wartable.co](https://wartable.co/)** for personal use, with three ways to run — auto-detected at startup:
+An **unofficial replica of [wartable.co](https://wartable.co/)** for personal use. **Pick your engine right in the app** (⚙︎ Engine) — no restart, no env vars required. Four options:
 
-1. **100% free / local — no account at all**: set `LLM_BASE_URL` and it talks to any OpenAI-compatible server. Local: [Ollama](https://github.com/ollama/ollama), [LM Studio](https://lmstudio.ai), [Jan](https://github.com/menloresearch/jan), [llama.cpp](https://github.com/ggml-org/llama.cpp) (`llama-server`), [LocalAI](https://github.com/mudler/LocalAI). Free hosted tiers: OpenRouter (`:free` models), Groq, Google AI Studio, Cerebras.
-2. **With a Claude Pro/Max subscription** (no API key): uses the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk), which authenticates through your existing Claude Code login.
-3. **Without a subscription, on Claude**: set `ANTHROPIC_API_KEY` and it uses the Claude API directly. A new [console.anthropic.com](https://console.anthropic.com) account comes with free starter credits.
+1. **🖥️ Local / free — no account at all**: any OpenAI-compatible server. Local: [Ollama](https://github.com/ollama/ollama), [LM Studio](https://lmstudio.ai), [Jan](https://github.com/menloresearch/jan), [llama.cpp](https://github.com/ggml-org/llama.cpp) (`llama-server`), [LocalAI](https://github.com/mudler/LocalAI). Free hosted tiers: OpenRouter (`:free` models), Groq, Google AI Studio, Cerebras.
+2. **🔑 Claude API**: paste an `ANTHROPIC_API_KEY`. A new [console.anthropic.com](https://console.anthropic.com) account comes with free starter credits — no subscription needed.
+3. **💎 Claude subscription**: uses the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk) and your existing Claude Code login (Pro/Max), no API key.
+4. **🎭 Demo**: canned answers, zero usage — handy for trying the UI.
+
+Your choice and any keys are saved **only in your browser** (localStorage) and sent only to the War Table server you run. You can still set env vars (below) to preselect a default; the in-app picker overrides them per request.
 
 The panel is five personas, each arguing from its own angle:
 
@@ -40,36 +43,37 @@ Everything streams live to the browser over Server-Sent Events. Each turn is a t
 
 ```bash
 npm install
-
-# Option A — Pro/Max subscription (Claude Code login, no key):
 npm start
-
-# Option B — no subscription (Claude API key + free starter credits):
-export ANTHROPIC_API_KEY=sk-ant-...
-npm start
-
-# Option C — 100% free and local with Ollama (no account, works offline):
-ollama pull llama3.1        # or qwen2.5, mistral, gemma2, phi3…
-export LLM_BASE_URL=http://localhost:11434/v1
-export LLM_MODEL=llama3.1
-npm start
-
-# open http://localhost:3000
+# open http://localhost:3000, then click ⚙︎ Engine and choose your backend
 ```
 
-Backend priority: `LLM_BASE_URL` > `ANTHROPIC_API_KEY` > Claude Code login.
+That's it — everything is picked in the UI. If you'd rather set a **default** engine
+so it's preselected (e.g. for a shared/hosted instance), use env vars:
 
-### More free/local endpoints (same two env vars)
+```bash
+# Default to local Ollama:
+ollama pull llama3.1
+LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=llama3.1 npm start
 
-| Server | `LLM_BASE_URL` | Notes |
+# Default to the Claude API:
+ANTHROPIC_API_KEY=sk-ant-... npm start
+```
+
+Env default priority (when the request doesn't pick one): `LLM_BASE_URL` > `ANTHROPIC_API_KEY` > Claude Code login.
+
+### Local / free endpoints (choose in ⚙︎ Engine → Local, or as `LLM_BASE_URL`)
+
+The Local option has presets for these; "Other…" lets you type any URL.
+
+| Server | URL | Notes |
 |---|---|---|
 | Ollama | `http://localhost:11434/v1` | CLI-first, easiest local option |
 | LM Studio | `http://localhost:1234/v1` | Polished GUI + model browser |
 | llama.cpp (`llama-server`) | `http://localhost:8080/v1` | Zero-dependency workhorse |
 | Jan / LocalAI | see their docs | Open-source local servers |
-| OpenRouter | `https://openrouter.ai/api/v1` | 20+ `:free` models; set `LLM_API_KEY`; model e.g. `meta-llama/llama-3.3-70b-instruct:free` |
-| Groq | `https://api.groq.com/openai/v1` | Fast free tier; set `LLM_API_KEY` |
-| Google AI Studio | `https://generativelanguage.googleapis.com/v1beta/openai` | Free Gemini quota; set `LLM_API_KEY` |
+| OpenRouter | `https://openrouter.ai/api/v1` | 20+ `:free` models; paste an API key; model e.g. `meta-llama/llama-3.3-70b-instruct:free` |
+| Groq | `https://api.groq.com/openai/v1` | Fast free tier; paste an API key |
+| Google AI Studio | `https://generativelanguage.googleapis.com/v1beta/openai` | Free Gemini quota; paste an API key |
 
 Fun trick with Ollama — make it a *real* multi-model debate, like the original wartable.co:
 

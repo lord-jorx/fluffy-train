@@ -2,13 +2,18 @@ import express from 'express';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runDebate, pickBackend } from './lib/debate.js';
+import { runDebate, pickBackend, resolveConfig, validateConfig, serverDefaults } from './lib/debate.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 app.use(express.json({ limit: '32kb' }));
 app.use(express.static(path.join(here, 'public')));
+
+// Non-secret server defaults, so the settings UI can preselect a sensible engine.
+app.get('/api/config', (req, res) => {
+  res.json(serverDefaults());
+});
 
 app.post('/api/debate', async (req, res) => {
   const question = (req.body?.question || '').trim();
@@ -17,6 +22,14 @@ app.post('/api/debate', async (req, res) => {
   }
   if (question.length > 2000) {
     return res.status(400).json({ error: 'question is too long (max 2000 characters)' });
+  }
+
+  // Validate the chosen engine before opening the stream, so bad config
+  // surfaces as a clean 400 the browser can show inline.
+  try {
+    validateConfig(resolveConfig(req.body?.config));
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
   }
 
   res.set({
@@ -36,7 +49,7 @@ app.post('/api/debate', async (req, res) => {
   };
 
   try {
-    await runDebate(question, emit);
+    await runDebate(question, emit, req.body?.config);
   } catch (err) {
     emit({ type: 'error', message: err?.message || 'debate failed' });
   }

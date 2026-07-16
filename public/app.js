@@ -16,6 +16,153 @@ const againBtn = document.getElementById('again-btn');
 let debaters = [];
 let verdictRaw = '';
 
+// ---------------------------------------------------------------------------
+// Engine settings — pick local / Claude API / Claude subscription / demo, and
+// remember it (plus any keys) in this browser only.
+// ---------------------------------------------------------------------------
+
+const STORE_KEY = 'wartable.settings.v1';
+const engineToggle = document.getElementById('engine-toggle');
+const engineSummary = document.getElementById('engine-summary');
+const settingsEl = document.getElementById('settings');
+const localPreset = document.getElementById('local-preset');
+const localBaseurl = document.getElementById('local-baseurl');
+const localModel = document.getElementById('local-model');
+const localApikey = document.getElementById('local-apikey');
+const apiKeyEl = document.getElementById('api-key');
+const installBtn = document.getElementById('install-btn');
+
+const BACKEND_LABELS = {
+  local: '🖥️ Local / free',
+  api: '🔑 Claude API',
+  'claude-code': '💎 Claude subscription',
+  mock: '🎭 Demo',
+};
+
+let settings = {
+  backend: 'mock',
+  local: { baseUrl: 'http://localhost:11434/v1', model: 'llama3.1', apiKey: '' },
+  api: { apiKey: '' },
+};
+
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    if (saved) settings = { ...settings, ...saved, local: { ...settings.local, ...saved.local }, api: { ...settings.api, ...saved.api } };
+  } catch {}
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(settings));
+  } catch {}
+}
+
+// Fill the form from `settings` and show the right field group.
+function renderSettings() {
+  const radio = document.querySelector(`input[name="backend"][value="${settings.backend}"]`);
+  if (radio) radio.checked = true;
+
+  localBaseurl.value = settings.local.baseUrl || '';
+  localModel.value = settings.local.model || '';
+  localApikey.value = settings.local.apiKey || '';
+  apiKeyEl.value = settings.api.apiKey || '';
+
+  // Preset select reflects the current URL (or "custom").
+  const known = [...localPreset.options].some((o) => o.value === settings.local.baseUrl);
+  localPreset.value = known ? settings.local.baseUrl : '__custom';
+
+  for (const group of document.querySelectorAll('.engine-fields')) {
+    group.hidden = group.dataset.for !== settings.backend;
+  }
+
+  let summary = BACKEND_LABELS[settings.backend] || 'Engine';
+  if (settings.backend === 'local') {
+    let host = settings.local.baseUrl;
+    try { host = new URL(settings.local.baseUrl).host; } catch {}
+    summary = `🖥️ ${settings.local.model || 'model'} · ${host}`;
+  }
+  engineSummary.textContent = `⚙︎ Engine: ${summary}`;
+}
+
+function readSettingsFromForm() {
+  const chosen = document.querySelector('input[name="backend"]:checked');
+  if (chosen) settings.backend = chosen.value;
+  settings.local.baseUrl = localBaseurl.value.trim();
+  settings.local.model = localModel.value.trim();
+  settings.local.apiKey = localApikey.value.trim();
+  settings.api.apiKey = apiKeyEl.value.trim();
+  saveSettings();
+  renderSettings();
+}
+
+// Build the config object sent with each debate request.
+function requestConfig() {
+  if (settings.backend === 'local') {
+    return {
+      backend: 'local',
+      local: {
+        baseUrl: settings.local.baseUrl,
+        model: settings.local.model,
+        apiKey: settings.local.apiKey || undefined,
+      },
+    };
+  }
+  if (settings.backend === 'api') {
+    return { backend: 'api', api: { apiKey: settings.api.apiKey } };
+  }
+  return { backend: settings.backend }; // claude-code | mock
+}
+
+engineToggle.addEventListener('click', () => {
+  const open = settingsEl.hidden;
+  settingsEl.hidden = !open;
+  engineToggle.setAttribute('aria-expanded', String(open));
+});
+
+document.getElementById('engine-options').addEventListener('change', readSettingsFromForm);
+for (const el of [localBaseurl, localModel, localApikey, apiKeyEl]) {
+  el.addEventListener('input', readSettingsFromForm);
+}
+localPreset.addEventListener('change', () => {
+  if (localPreset.value !== '__custom') localBaseurl.value = localPreset.value;
+  readSettingsFromForm();
+});
+
+// On first visit, preselect whatever the server was started with.
+async function initSettings() {
+  const hadSaved = !!localStorage.getItem(STORE_KEY);
+  loadSettings();
+  if (!hadSaved) {
+    try {
+      const d = await fetch('/api/config').then((r) => r.json());
+      if (d.backend) settings.backend = d.backend;
+      if (d.local?.baseUrl) settings.local.baseUrl = d.local.baseUrl;
+      if (d.local?.model) settings.local.model = d.local.model;
+    } catch {}
+  }
+  renderSettings();
+}
+initSettings();
+
+// PWA install prompt → surface our own button.
+let deferredPrompt = null;
+addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.hidden = false;
+});
+installBtn.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice.catch(() => {});
+  deferredPrompt = null;
+  installBtn.hidden = true;
+});
+addEventListener('appinstalled', () => {
+  installBtn.hidden = true;
+});
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const question = questionEl.value.trim();
@@ -38,7 +185,7 @@ async function runDebate(question) {
     const res = await fetch('/api/debate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, config: requestConfig() }),
     });
     if (!res.ok || !res.body) {
       const err = await res.json().catch(() => ({}));
@@ -89,10 +236,11 @@ function handleEvent(ev) {
   switch (ev.type) {
     case 'start': {
       debaters = ev.debaters;
-      if (ev.mock) {
-        modeBadge.hidden = false;
-        modeBadge.textContent = 'Demo mode (MOCK=1) — start the server without it to debate on your Claude subscription.';
-      }
+      const label = BACKEND_LABELS[ev.backend] || ev.backend;
+      modeBadge.hidden = false;
+      modeBadge.textContent = ev.mock
+        ? 'Demo mode — pick a real engine in ⚙︎ Engine for a live debate.'
+        : `Engine: ${label}`;
       for (const d of ev.debaters) {
         panelStrip.insertAdjacentHTML(
           'beforeend',

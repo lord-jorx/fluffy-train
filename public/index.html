@@ -19,10 +19,13 @@
 <body>
   <header class="hero">
     <div class="hero-inner">
-      <p class="kicker">An unofficial wartable.co replica — powered entirely by Claude</p>
+      <div class="topbar">
+        <p class="kicker">An unofficial wartable.co replica</p>
+        <button id="install-btn" class="install-btn" type="button" hidden>⬇︎ Install app</button>
+      </div>
       <h1>War <span class="accent">Table</span></h1>
       <p class="sub">
-        Five Claude models. Three rounds. One verdict.<br />
+        Five AI advisors. Three rounds. One verdict.<br />
         Convene the table, force them to challenge each other, and get an answer you can actually defend.
       </p>
       <form id="ask-form" class="ask">
@@ -35,6 +38,70 @@
         ></textarea>
         <button id="convene" type="submit">⚔️ Convene the table</button>
       </form>
+
+      <button id="engine-toggle" class="engine-toggle" type="button" aria-expanded="false">
+        <span id="engine-summary">⚙︎ Engine…</span>
+        <span class="chev">▾</span>
+      </button>
+
+      <section id="settings" class="settings" hidden aria-label="Engine settings">
+        <h3>How should the panel debate?</h3>
+        <div class="engine-options" id="engine-options">
+          <label class="engine-opt">
+            <input type="radio" name="backend" value="local" />
+            <span class="opt-body"><b>🖥️ Local / free</b><small>Ollama, LM Studio, llama.cpp, OpenRouter, Groq…</small></span>
+          </label>
+          <label class="engine-opt">
+            <input type="radio" name="backend" value="api" />
+            <span class="opt-body"><b>🔑 Claude API</b><small>API key — free starter credits, no subscription</small></span>
+          </label>
+          <label class="engine-opt">
+            <input type="radio" name="backend" value="claude-code" />
+            <span class="opt-body"><b>💎 Claude subscription</b><small>Your Claude Code login on the server (Pro/Max)</small></span>
+          </label>
+          <label class="engine-opt">
+            <input type="radio" name="backend" value="mock" />
+            <span class="opt-body"><b>🎭 Demo</b><small>Canned answers, zero usage</small></span>
+          </label>
+        </div>
+
+        <div class="engine-fields" data-for="local" hidden>
+          <label>Server
+            <select id="local-preset">
+              <option value="http://localhost:11434/v1">Ollama · localhost:11434</option>
+              <option value="http://localhost:1234/v1">LM Studio · localhost:1234</option>
+              <option value="http://localhost:8080/v1">llama.cpp · localhost:8080</option>
+              <option value="https://openrouter.ai/api/v1">OpenRouter (cloud, free tier)</option>
+              <option value="https://api.groq.com/openai/v1">Groq (cloud, free tier)</option>
+              <option value="https://generativelanguage.googleapis.com/v1beta/openai">Google AI Studio (cloud, free)</option>
+              <option value="__custom">Other…</option>
+            </select>
+          </label>
+          <label>URL <input id="local-baseurl" type="url" placeholder="http://localhost:11434/v1" autocomplete="off" /></label>
+          <label>Model <input id="local-model" type="text" placeholder="llama3.1" autocomplete="off" /></label>
+          <label>API key <small>(cloud services only)</small>
+            <input id="local-apikey" type="password" placeholder="optional" autocomplete="off" />
+          </label>
+        </div>
+
+        <div class="engine-fields" data-for="api" hidden>
+          <label>ANTHROPIC_API_KEY
+            <input id="api-key" type="password" placeholder="sk-ant-..." autocomplete="off" />
+          </label>
+          <p class="hint">Get one free at console.anthropic.com. New accounts include starter credits.</p>
+        </div>
+
+        <div class="engine-fields" data-for="claude-code" hidden>
+          <p class="hint">Uses the Claude Code login on the computer running the server. Sign in there with <code>claude</code> → <code>/login</code>. Requires a Pro/Max plan.</p>
+        </div>
+
+        <div class="engine-fields" data-for="mock" hidden>
+          <p class="hint">Demo mode: prefabricated answers, no model is used.</p>
+        </div>
+
+        <p class="settings-note">🔒 Keys are stored only on this device (localStorage) and sent only to the War Table server you run.</p>
+      </section>
+
       <p id="mode-badge" class="mode-badge" hidden></p>
     </div>
   </header>
