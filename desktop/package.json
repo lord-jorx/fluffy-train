@@ -1,9 +1,9 @@
 {
-  "name": "war-table-desktop",
-  "productName": "War Table",
+  "name": "quorum-desktop",
+  "productName": "Quorum",
   "version": "1.0.0",
   "private": true,
-  "description": "Desktop build of War Table (Windows, macOS, Linux).",
+  "description": "Desktop build of Quorum (Windows, macOS, Linux).",
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
@@ -17,8 +17,8 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "co.wartable.claude",
-    "productName": "War Table",
+    "appId": "app.quorum.council",
+    "productName": "Quorum",
     "directories": { "output": "dist" },
     "files": ["main.cjs"],
     "extraResources": [

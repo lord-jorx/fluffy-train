@@ -76,7 +76,7 @@ app.listen(PORT, '0.0.0.0', () => {
     api: 'LIVE via Claude API (ANTHROPIC_API_KEY — works with free starter credits)',
     'claude-code': 'LIVE via Claude Code login (Pro/Max subscription, no API key)',
   }[pickBackend()];
-  console.log(`\n  ⚔️  War Table — mode: ${mode}\n`);
+  console.log(`\n  🏛️  Quorum — mode: ${mode}\n`);
   console.log(`     On this computer:  http://localhost:${PORT}`);
   for (const url of lanUrls(PORT)) {
     console.log(`     On your phone:     ${url}   (same Wi-Fi → Add to Home Screen)`);

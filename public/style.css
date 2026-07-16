@@ -1,4 +1,4 @@
-/* War Table — dark war-room aesthetic */
+/* Quorum — dark council-chamber aesthetic */
 
 :root {
   --bg: #12100d;
@@ -13,6 +13,13 @@
 }
 
 * { box-sizing: border-box; }
+
+/* An author `display` rule (e.g. `.engine-fields { display: grid }`) beats the
+   browser's default `[hidden] { display: none }` at equal specificity — author
+   origin always wins over user-agent origin in the cascade, regardless of which
+   selector is "more specific". Without this, any class that sets `display`
+   silently defeats the `hidden` attribute on that element. */
+[hidden] { display: none !important; }
 
 html, body {
   margin: 0;
@@ -122,8 +129,10 @@ h1 .accent { color: var(--accent); font-style: italic; }
   cursor: pointer;
 }
 .engine-toggle:hover { border-color: var(--accent-deep); }
-.engine-toggle .chev { transition: transform 0.2s; color: var(--ink-dim); }
-.engine-toggle[aria-expanded='true'] .chev { transform: rotate(180deg); }
+.engine-toggle .chev,
+.adv-toggle .chev { transition: transform 0.2s; color: var(--ink-dim); }
+.engine-toggle[aria-expanded='true'] .chev,
+.adv-toggle[aria-expanded='true'] .chev { transform: rotate(180deg); }
 
 .settings {
   max-width: 560px;
@@ -158,7 +167,8 @@ h1 .accent { color: var(--accent); font-style: italic; }
 .opt-body small { color: var(--ink-dim); font-size: 0.76rem; }
 
 .engine-fields { margin-top: 1rem; display: grid; gap: 0.7rem; }
-.engine-fields label {
+.engine-fields label,
+.adv-grid label {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -167,7 +177,8 @@ h1 .accent { color: var(--accent); font-style: italic; }
 }
 .engine-fields label small { color: #6f6857; }
 .engine-fields input,
-.engine-fields select {
+.engine-fields select,
+.adv-grid input {
   background: var(--bg);
   color: var(--ink);
   border: 1px solid #3a342a;
@@ -177,7 +188,8 @@ h1 .accent { color: var(--accent); font-style: italic; }
   font-size: 0.9rem;
 }
 .engine-fields input:focus,
-.engine-fields select:focus { outline: 2px solid var(--accent-deep); border-color: transparent; }
+.engine-fields select:focus,
+.adv-grid input:focus { outline: 2px solid var(--accent-deep); border-color: transparent; }
 .engine-fields .hint { margin: 0; font-size: 0.8rem; color: var(--ink-dim); }
 .engine-fields code {
   font-family: ui-monospace, Menlo, Consolas, monospace;
@@ -189,6 +201,33 @@ h1 .accent { color: var(--accent); font-style: italic; }
   font-size: 0.74rem;
   color: #6f6857;
 }
+
+/* Advanced: per-advisor model override */
+.adv-toggle {
+  margin-top: 1.1rem;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  color: var(--ink-dim);
+  border: 1px dashed #3a342a;
+  border-radius: 10px;
+  padding: 0.55rem 0.85rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.adv-toggle:hover { color: var(--accent); border-color: var(--accent-deep); }
+
+.adv-panel { margin-top: 0.8rem; }
+.adv-panel .hint { margin: 0 0 0.8rem; }
+.adv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.6rem;
+}
+.adv-grid-judge { margin-top: 0.6rem; }
 
 .arena { max-width: 1080px; margin: 0 auto; padding: 0 1.25rem 4rem; }
 

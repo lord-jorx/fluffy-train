@@ -1,7 +1,7 @@
 {
-  "name": "war-table-claude",
+  "name": "quorum-council",
   "version": "1.0.0",
-  "description": "Five Claude personas debate your toughest decisions across three rounds and deliver a verdict. Unofficial replica of wartable.co that runs on your Claude Pro/Max subscription via the Claude Agent SDK — no API key needed.",
+  "description": "Quorum — five AI advisors debate your toughest decisions across three rounds and deliver a verdict. Runs on whatever AI you already have: a local model, a Claude API key, or your Claude subscription.",
   "type": "module",
   "main": "server.js",
   "scripts": {

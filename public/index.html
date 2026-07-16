@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>War Table — Five AIs debate your toughest decisions</title>
+  <title>Quorum — five AI advisors, one verdict</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="/icon.svg" />
 
@@ -13,20 +13,20 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="War Table" />
+  <meta name="apple-mobile-web-app-title" content="Quorum" />
   <meta name="mobile-web-app-capable" content="yes" />
 </head>
 <body>
   <header class="hero">
     <div class="hero-inner">
       <div class="topbar">
-        <p class="kicker">An unofficial wartable.co replica</p>
+        <p class="kicker">Convene five AI advisors · get one verdict</p>
         <button id="install-btn" class="install-btn" type="button" hidden>⬇︎ Install app</button>
       </div>
-      <h1>War <span class="accent">Table</span></h1>
+      <h1>Quo<span class="accent">rum</span></h1>
       <p class="sub">
-        Five AI advisors. Three rounds. One verdict.<br />
-        Convene the table, force them to challenge each other, and get an answer you can actually defend.
+        Five advisors. Three rounds. One verdict.<br />
+        Convene the panel, force them to challenge each other, and get an answer you can actually defend.
       </p>
       <form id="ask-form" class="ask">
         <textarea
@@ -36,7 +36,7 @@
           placeholder="Should I quit my job to start a company? Should we rewrite the backend in Rust? Ask anything you're stuck on…"
           required
         ></textarea>
-        <button id="convene" type="submit">⚔️ Convene the table</button>
+        <button id="convene" type="submit">🏛️ Convene the quorum</button>
       </form>
 
       <button id="engine-toggle" class="engine-toggle" type="button" aria-expanded="false">
@@ -99,7 +99,28 @@
           <p class="hint">Demo mode: prefabricated answers, no model is used.</p>
         </div>
 
-        <p class="settings-note">🔒 Keys are stored only on this device (localStorage) and sent only to the War Table server you run.</p>
+        <div id="adv-wrap">
+          <button type="button" id="adv-toggle" class="adv-toggle" aria-expanded="false">
+            🎛️ Different model per advisor <span class="chev">▾</span>
+          </button>
+          <div id="adv-panel" class="adv-panel" hidden>
+            <p class="hint">
+              Optional — a true multi-model quorum, like giving each advisor a different mind.
+              Leave a field blank to use the single model above. Format depends on the engine:
+              a local server model name (e.g. <code>qwen2.5</code>) or a Claude alias
+              (<code>opus</code> / <code>sonnet</code> / <code>haiku</code>).
+            </p>
+            <!-- Debater rows are rendered from GET /api/config's `personas` list
+                 (see lib/debate.js#serverDefaults), so labels always match the
+                 real panel order — nothing here hardcodes it. -->
+            <div class="adv-grid" id="adv-grid"></div>
+            <div class="adv-grid adv-grid-judge">
+              <label>⚖ The Arbiter (judge) <input id="adv-judge" type="text" placeholder="—" autocomplete="off" /></label>
+            </div>
+          </div>
+        </div>
+
+        <p class="settings-note">🔒 Keys are stored only on this device (localStorage) and sent only to the Quorum server you run.</p>
       </section>
 
       <p id="mode-badge" class="mode-badge" hidden></p>
@@ -121,8 +142,8 @@
 
   <footer class="foot">
     <p>
-      Runs on your Claude Pro/Max subscription, on the Claude API with free starter credits,
-      or fully local &amp; free via Ollama / any OpenAI-compatible server. Not affiliated with wartable.co.
+      Runs on whatever AI you already have — a local model (Ollama, LM Studio…),
+      a Claude API key, or your Claude subscription. Nothing leaves this server.
     </p>
   </footer>
 

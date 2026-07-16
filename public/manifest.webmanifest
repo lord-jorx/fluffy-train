@@ -1,7 +1,7 @@
 {
-  "name": "War Table — Claude Edition",
-  "short_name": "War Table",
-  "description": "Five AI advisors debate your toughest decisions across three rounds and deliver a verdict.",
+  "name": "Quorum — five AI advisors, one verdict",
+  "short_name": "Quorum",
+  "description": "Convene a panel of five AI advisors, force them to challenge each other across three rounds, and get a verdict you can actually defend.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

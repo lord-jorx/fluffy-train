@@ -1,4 +1,4 @@
-// Electron wrapper — turns War Table into a standalone desktop app for
+// Electron wrapper — turns Quorum into a standalone desktop app for
 // Windows, macOS and Linux. It starts the bundled Node server as a child
 // process and loads it in a native window; no browser or terminal needed.
 
@@ -40,11 +40,11 @@ function createWindow() {
     height: 920,
     minWidth: 380,
     backgroundColor: '#12100d',
-    title: 'War Table',
+    title: 'Quorum',
     autoHideMenuBar: true,
     webPreferences: { contextIsolation: true },
   });
-  // Open external links (e.g. wartable.co, docs) in the real browser.
+  // Open external links (e.g. docs, GitHub) in the real browser.
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };

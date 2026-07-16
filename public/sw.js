@@ -1,5 +1,5 @@
-// War Table service worker — offline app shell, live network for the API.
-const CACHE = 'wartable-v1';
+// Quorum service worker — offline app shell, live network for the API.
+const CACHE = 'quorum-v1';
 const SHELL = [
   '/',
   '/index.html',

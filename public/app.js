@@ -1,4 +1,4 @@
-// War Table frontend — streams the debate over SSE (fetch + ReadableStream,
+// Quorum frontend — streams the debate over SSE (fetch + ReadableStream,
 // since EventSource can't POST).
 
 const form = document.getElementById('ask-form');
@@ -21,7 +21,7 @@ let verdictRaw = '';
 // remember it (plus any keys) in this browser only.
 // ---------------------------------------------------------------------------
 
-const STORE_KEY = 'wartable.settings.v1';
+const STORE_KEY = 'quorum.settings.v1';
 const engineToggle = document.getElementById('engine-toggle');
 const engineSummary = document.getElementById('engine-summary');
 const settingsEl = document.getElementById('settings');
@@ -31,6 +31,15 @@ const localModel = document.getElementById('local-model');
 const localApikey = document.getElementById('local-apikey');
 const apiKeyEl = document.getElementById('api-key');
 const installBtn = document.getElementById('install-btn');
+const advWrap = document.getElementById('adv-wrap');
+const advToggle = document.getElementById('adv-toggle');
+const advPanel = document.getElementById('adv-panel');
+const advGrid = document.getElementById('adv-grid');
+const advJudge = document.getElementById('adv-judge');
+// Cached once — these groups are static in the HTML, unlike advInputs below
+// (built dynamically from the server's persona list, see buildAdvGrid).
+const engineFieldGroups = [...document.querySelectorAll('.engine-fields')];
+const advInputs = [];
 
 const BACKEND_LABELS = {
   local: '🖥️ Local / free',
@@ -43,12 +52,22 @@ let settings = {
   backend: 'mock',
   local: { baseUrl: 'http://localhost:11434/v1', model: 'llama3.1', apiKey: '' },
   api: { apiKey: '' },
+  // Optional per-advisor model override — a true multi-model quorum.
+  panel: { debaters: ['', '', '', '', ''], judge: '' },
 };
 
 function loadSettings() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-    if (saved) settings = { ...settings, ...saved, local: { ...settings.local, ...saved.local }, api: { ...settings.api, ...saved.api } };
+    if (saved) {
+      settings = {
+        ...settings,
+        ...saved,
+        local: { ...settings.local, ...saved.local },
+        api: { ...settings.api, ...saved.api },
+        panel: { ...settings.panel, ...saved.panel },
+      };
+    }
   } catch {}
 }
 
@@ -58,23 +77,57 @@ function saveSettings() {
   } catch {}
 }
 
+// Assigning .value resets the caret even when the string is unchanged, which
+// would otherwise bounce the cursor to the end on every keystroke (each
+// keystroke fires 'input' -> read -> render -> reassign .value).
+function setValue(el, v) {
+  if (el.value !== v) el.value = v;
+}
+
+// Render the 5 debater override fields from the server's persona list (see
+// GET /api/config), so the labels can never drift out of sync with the real
+// panel order the way a second, hand-typed copy could. `advInputs[i]`'s index
+// *is* the position in settings.panel.debaters — no separate id to track.
+function buildAdvGrid(personas) {
+  advGrid.innerHTML = '';
+  advInputs.length = 0;
+  personas.forEach((persona, i) => {
+    const label = document.createElement('label');
+    const span = document.createElement('span');
+    span.textContent = persona?.name || `Advisor ${i + 1}`;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = '—';
+    input.autocomplete = 'off';
+    input.addEventListener('input', readAdvFromForm);
+    label.append(span, input);
+    advGrid.appendChild(label);
+    advInputs.push(input);
+  });
+}
+
 // Fill the form from `settings` and show the right field group.
 function renderSettings() {
   const radio = document.querySelector(`input[name="backend"][value="${settings.backend}"]`);
   if (radio) radio.checked = true;
 
-  localBaseurl.value = settings.local.baseUrl || '';
-  localModel.value = settings.local.model || '';
-  localApikey.value = settings.local.apiKey || '';
-  apiKeyEl.value = settings.api.apiKey || '';
+  setValue(localBaseurl, settings.local.baseUrl || '');
+  setValue(localModel, settings.local.model || '');
+  setValue(localApikey, settings.local.apiKey || '');
+  setValue(apiKeyEl, settings.api.apiKey || '');
 
   // Preset select reflects the current URL (or "custom").
   const known = [...localPreset.options].some((o) => o.value === settings.local.baseUrl);
   localPreset.value = known ? settings.local.baseUrl : '__custom';
 
-  for (const group of document.querySelectorAll('.engine-fields')) {
+  for (const group of engineFieldGroups) {
     group.hidden = group.dataset.for !== settings.backend;
   }
+
+  // Per-advisor overrides are meaningless in demo mode.
+  advWrap.hidden = settings.backend === 'mock';
+  advInputs.forEach((input, i) => setValue(input, settings.panel.debaters[i] || ''));
+  setValue(advJudge, settings.panel.judge || '');
 
   let summary = BACKEND_LABELS[settings.backend] || 'Engine';
   if (settings.backend === 'local') {
@@ -96,10 +149,18 @@ function readSettingsFromForm() {
   renderSettings();
 }
 
+function readAdvFromForm() {
+  advInputs.forEach((input, i) => { settings.panel.debaters[i] = input.value.trim(); });
+  settings.panel.judge = advJudge.value.trim();
+  saveSettings();
+  renderSettings();
+}
+
 // Build the config object sent with each debate request.
 function requestConfig() {
+  let cfg;
   if (settings.backend === 'local') {
-    return {
+    cfg = {
       backend: 'local',
       local: {
         baseUrl: settings.local.baseUrl,
@@ -107,18 +168,30 @@ function requestConfig() {
         apiKey: settings.local.apiKey || undefined,
       },
     };
+  } else if (settings.backend === 'api') {
+    cfg = { backend: 'api', api: { apiKey: settings.api.apiKey } };
+  } else {
+    cfg = { backend: settings.backend }; // claude-code | mock
   }
-  if (settings.backend === 'api') {
-    return { backend: 'api', api: { apiKey: settings.api.apiKey } };
+
+  // A true multi-model quorum: give each advisor its own model.
+  const debaterModels = settings.panel.debaters.map((m) => m.trim());
+  const judgeModel = settings.panel.judge.trim();
+  if (settings.backend !== 'mock' && (debaterModels.some(Boolean) || judgeModel)) {
+    cfg.panel = { debaterModels, judgeModel: judgeModel || undefined };
   }
-  return { backend: settings.backend }; // claude-code | mock
+  return cfg;
 }
 
-engineToggle.addEventListener('click', () => {
-  const open = settingsEl.hidden;
-  settingsEl.hidden = !open;
-  engineToggle.setAttribute('aria-expanded', String(open));
-});
+// Shared by the engine panel and the advanced-panel disclosure buttons.
+function toggleDisclosure(button, panel) {
+  const open = panel.hidden;
+  panel.hidden = !open;
+  button.setAttribute('aria-expanded', String(open));
+}
+
+engineToggle.addEventListener('click', () => toggleDisclosure(engineToggle, settingsEl));
+advToggle.addEventListener('click', () => toggleDisclosure(advToggle, advPanel));
 
 document.getElementById('engine-options').addEventListener('change', readSettingsFromForm);
 for (const el of [localBaseurl, localModel, localApikey, apiKeyEl]) {
@@ -128,19 +201,27 @@ localPreset.addEventListener('change', () => {
   if (localPreset.value !== '__custom') localBaseurl.value = localPreset.value;
   readSettingsFromForm();
 });
+advJudge.addEventListener('input', readAdvFromForm); // debater inputs wire themselves in buildAdvGrid
 
-// On first visit, preselect whatever the server was started with.
+// Always fetch persona names for the advanced panel; only apply the
+// engine/local defaults on a first visit, so a returning user's saved
+// choice is never silently overwritten.
 async function initSettings() {
   const hadSaved = !!localStorage.getItem(STORE_KEY);
   loadSettings();
-  if (!hadSaved) {
-    try {
-      const d = await fetch('/api/config').then((r) => r.json());
+
+  let personas = [null, null, null, null, null]; // buildAdvGrid falls back to "Advisor N"
+  try {
+    const d = await fetch('/api/config').then((r) => r.json());
+    if (Array.isArray(d.personas) && d.personas.length === 5) personas = d.personas;
+    if (!hadSaved) {
       if (d.backend) settings.backend = d.backend;
       if (d.local?.baseUrl) settings.local.baseUrl = d.local.baseUrl;
       if (d.local?.model) settings.local.model = d.local.model;
-    } catch {}
-  }
+    }
+  } catch {}
+
+  buildAdvGrid(personas);
   renderSettings();
 }
 initSettings();
