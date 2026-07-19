@@ -1,0 +1,19 @@
+{
+  "name": "quorum-council",
+  "version": "1.0.0",
+  "description": "Quorum — five AI advisors debate your toughest decisions across three rounds and deliver a verdict. Runs on whatever AI you already have: a local model, a Claude API key, or your Claude subscription.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "MOCK=1 node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.0",
+    "@anthropic-ai/sdk": "^0.111.0",
+    "express": "^4.19.2"
+  }
+}

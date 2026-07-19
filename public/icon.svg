@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Quorum mark: five voices (the seats) converging on one verdict (the seal). -->
+  <rect width="512" height="512" rx="112" fill="#14110d"/>
+  <rect x="8" y="8" width="496" height="496" rx="104" fill="none" stroke="#3a3125" stroke-width="4"/>
+
+  <!-- chamber ring -->
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#c9a86a" stroke-width="6" opacity="0.35"/>
+
+  <!-- five spokes, seat to center -->
+  <g stroke="#c9a86a" stroke-width="3.5" stroke-linecap="round" opacity="0.55">
+    <line x1="256" y1="106" x2="256" y2="256"/>
+    <line x1="398.6" y1="209.6" x2="256" y2="256"/>
+    <line x1="344.2" y1="377.4" x2="256" y2="256"/>
+    <line x1="167.8" y1="377.4" x2="256" y2="256"/>
+    <line x1="113.4" y1="209.6" x2="256" y2="256"/>
+  </g>
+
+  <!-- five seats -->
+  <g fill="#e8d4a8">
+    <circle cx="256" cy="106" r="15"/>
+    <circle cx="398.6" cy="209.6" r="15"/>
+    <circle cx="344.2" cy="377.4" r="15"/>
+    <circle cx="167.8" cy="377.4" r="15"/>
+    <circle cx="113.4" cy="209.6" r="15"/>
+  </g>
+  <g fill="#a8834a" opacity="0.9">
+    <circle cx="256" cy="106" r="6"/>
+    <circle cx="398.6" cy="209.6" r="6"/>
+    <circle cx="344.2" cy="377.4" r="6"/>
+    <circle cx="167.8" cy="377.4" r="6"/>
+    <circle cx="113.4" cy="209.6" r="6"/>
+  </g>
+
+  <!-- the verdict seal -->
+  <circle cx="256" cy="256" r="30" fill="#14110d" stroke="#e8d4a8" stroke-width="5"/>
+  <circle cx="256" cy="256" r="10" fill="#e8d4a8"/>
+</svg>
