@@ -1,20 +1,24 @@
-// Quorum frontend — streams the debate over SSE (fetch + ReadableStream,
-// since EventSource can't POST).
+// Quorum frontend — streams debates over SSE (fetch + ReadableStream, since
+// EventSource can't POST), keeps a local debate history, and supports
+// follow-up rounds after the verdict.
 
-const form = document.getElementById('ask-form');
-const questionEl = document.getElementById('question');
-const conveneBtn = document.getElementById('convene');
-const modeBadge = document.getElementById('mode-badge');
-const arena = document.getElementById('arena');
-const panelStrip = document.getElementById('panel-strip');
-const roundsEl = document.getElementById('rounds');
-const verdictSection = document.getElementById('verdict-section');
-const verdictBody = document.getElementById('verdict-body');
-const judgeModelEl = document.getElementById('judge-model');
-const againBtn = document.getElementById('again-btn');
+const $ = (id) => document.getElementById(id);
 
-let debaters = [];
-let verdictRaw = '';
+const form = $('ask-form');
+const questionEl = $('question');
+const conveneBtn = $('convene');
+const modeBadge = $('mode-badge');
+const arena = $('arena');
+const panelStrip = $('panel-strip');
+const roundsEl = $('rounds');
+const againBtn = $('again-btn');
+const stopBtn = $('stop-btn');
+const followupForm = $('followup-form');
+const followupQ = $('followup-q');
+const historyBtn = $('history-btn');
+const historyPanel = $('history-panel');
+const historyList = $('history-list');
+const historyEmpty = $('history-empty');
 
 // ---------------------------------------------------------------------------
 // Engine settings — pick local / Claude API / Claude subscription / demo, and
@@ -22,20 +26,20 @@ let verdictRaw = '';
 // ---------------------------------------------------------------------------
 
 const STORE_KEY = 'quorum.settings.v1';
-const engineToggle = document.getElementById('engine-toggle');
-const engineSummary = document.getElementById('engine-summary');
-const settingsEl = document.getElementById('settings');
-const localPreset = document.getElementById('local-preset');
-const localBaseurl = document.getElementById('local-baseurl');
-const localModel = document.getElementById('local-model');
-const localApikey = document.getElementById('local-apikey');
-const apiKeyEl = document.getElementById('api-key');
-const installBtn = document.getElementById('install-btn');
-const advWrap = document.getElementById('adv-wrap');
-const advToggle = document.getElementById('adv-toggle');
-const advPanel = document.getElementById('adv-panel');
-const advGrid = document.getElementById('adv-grid');
-const advJudge = document.getElementById('adv-judge');
+const engineToggle = $('engine-toggle');
+const engineSummary = $('engine-summary');
+const settingsEl = $('settings');
+const localPreset = $('local-preset');
+const localBaseurl = $('local-baseurl');
+const localModel = $('local-model');
+const localApikey = $('local-apikey');
+const apiKeyEl = $('api-key');
+const installBtn = $('install-btn');
+const advWrap = $('adv-wrap');
+const advToggle = $('adv-toggle');
+const advPanel = $('adv-panel');
+const advGrid = $('adv-grid');
+const advJudge = $('adv-judge');
 // Cached once — these groups are static in the HTML, unlike advInputs below
 // (built dynamically from the server's persona list, see buildAdvGrid).
 const engineFieldGroups = [...document.querySelectorAll('.engine-fields')];
@@ -183,7 +187,7 @@ function requestConfig() {
   return cfg;
 }
 
-// Shared by the engine panel and the advanced-panel disclosure buttons.
+// Shared by the engine, advanced-panel and history disclosure buttons.
 function toggleDisclosure(button, panel) {
   const open = panel.hidden;
   panel.hidden = !open;
@@ -192,8 +196,9 @@ function toggleDisclosure(button, panel) {
 
 engineToggle.addEventListener('click', () => toggleDisclosure(engineToggle, settingsEl));
 advToggle.addEventListener('click', () => toggleDisclosure(advToggle, advPanel));
+historyBtn.addEventListener('click', () => toggleDisclosure(historyBtn, historyPanel));
 
-document.getElementById('engine-options').addEventListener('change', readSettingsFromForm);
+$('engine-options').addEventListener('change', readSettingsFromForm);
 for (const el of [localBaseurl, localModel, localApikey, apiKeyEl]) {
   el.addEventListener('input', readSettingsFromForm);
 }
@@ -244,29 +249,256 @@ addEventListener('appinstalled', () => {
   installBtn.hidden = true;
 });
 
-form.addEventListener('submit', async (e) => {
+// ---------------------------------------------------------------------------
+// Debate history — stored only in this browser, one entry per debate
+// (follow-ups update their entry). Reopening replays the stored events
+// through the same renderer the live stream uses.
+// ---------------------------------------------------------------------------
+
+const HISTORY_KEY = 'quorum.history.v1';
+const HISTORY_MAX = 50;
+
+function loadHistory() {
+  try {
+    const list = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistHistory(list) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, HISTORY_MAX)));
+  } catch {} // full/blocked storage should never break the debate itself
+}
+
+function saveDebate() {
+  if (!debate || replaying) return;
+  const list = loadHistory().filter((e) => e.id !== debate.id);
+  list.unshift(debate);
+  persistHistory(list);
+  renderHistoryList();
+}
+
+function truncate(s, n) {
+  s = String(s ?? '');
+  return s.length > n ? `${s.slice(0, n - 1)}…` : s;
+}
+
+function renderHistoryList() {
+  const list = loadHistory();
+  historyEmpty.hidden = list.length > 0;
+  historyList.innerHTML = '';
+  for (const entry of list) {
+    const li = document.createElement('li');
+    const date = new Date(entry.startedAt).toLocaleDateString(undefined, {
+      day: 'numeric', month: 'short', year: 'numeric',
+    });
+    const n = entry.verdicts?.length || 0;
+    li.innerHTML =
+      `<button type="button" class="h-open"><b>${esc(truncate(entry.question, 90))}</b>` +
+      `<small>${esc(date)} · ${n} verdict${n === 1 ? '' : 's'} · ${esc(BACKEND_LABELS[entry.backend] || entry.backend || '')}</small></button>` +
+      `<button type="button" class="h-del" title="Delete" aria-label="Delete">✕</button>`;
+    li.querySelector('.h-open').addEventListener('click', () => {
+      historyPanel.hidden = true;
+      historyBtn.setAttribute('aria-expanded', 'false');
+      replayDebate(entry);
+    });
+    li.querySelector('.h-del').addEventListener('click', () => {
+      persistHistory(loadHistory().filter((e) => e.id !== entry.id));
+      renderHistoryList();
+    });
+    historyList.appendChild(li);
+  }
+}
+renderHistoryList();
+
+// Reopen a stored debate by replaying its data as synthetic SSE events
+// through handleEvent — one renderer for live and historical debates.
+function replayDebate(entry) {
+  debate = entry; // adopt it, so follow-ups continue this debate
+  replaying = true;
+  resetArena();
+
+  handleEvent({
+    type: 'start', mock: false, backend: entry.backend, question: entry.question,
+    debaters: entry.debaters || [], judge: entry.judge, rounds: [],
+  });
+
+  const replayRound = (r) => {
+    handleEvent({ type: 'round_start', round: r, title: roundTitleOf(entry, r) });
+    for (const t of (entry.transcript || []).filter((t) => t.round === r)) {
+      handleEvent({ type: 'turn_start', round: r, debater: t.debaterId });
+      handleEvent({ type: 'delta', round: r, debater: t.debaterId, text: t.text });
+      handleEvent({ type: 'turn_end', round: r, debater: t.debaterId });
+    }
+  };
+  const replayVerdict = (v) => {
+    handleEvent({ type: 'verdict_start' });
+    handleEvent({ type: 'verdict_delta', text: v.text });
+    handleEvent({ type: 'verdict_end' });
+  };
+
+  const rounds = [...new Set((entry.transcript || []).map((t) => t.round))].sort((a, b) => a - b);
+  for (const r of rounds.filter((r) => r <= 3)) replayRound(r);
+  const verdicts = entry.verdicts || [];
+  if (verdicts[0]) replayVerdict(verdicts[0]);
+  let vi = 1;
+  for (const r of rounds.filter((r) => r > 3)) {
+    const v = verdicts[vi];
+    handleEvent({
+      type: 'start', followup: true, backend: entry.backend, question: v?.question || '',
+      debaters: entry.debaters || [], judge: entry.judge,
+    });
+    replayRound(r);
+    if (v) replayVerdict(v);
+    vi++;
+  }
+
+  replaying = false;
+  showBadge('🗂 Reopened from history.');
+  if (verdicts.length > 0) followupForm.hidden = false;
+  againBtn.hidden = false;
+  arena.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function roundTitleOf(entry, r) {
+  return entry.roundTitles?.[r] || (r > 3 ? 'Follow-up' : `Round ${r}`);
+}
+
+// ---------------------------------------------------------------------------
+// Export — copy the verdict, or download the full debate as Markdown.
+// ---------------------------------------------------------------------------
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text); // unavailable on plain-HTTP LAN origins
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+}
+
+function debateMarkdown(d) {
+  const lines = [`# Quorum — ${d.question}`, '', `_${new Date(d.startedAt).toLocaleString()} · ${BACKEND_LABELS[d.backend] || d.backend || ''}_`, ''];
+  const roundMd = (r) => {
+    lines.push(`## ${roundTitleOf(d, r)}`, '');
+    for (const t of (d.transcript || []).filter((t) => t.round === r)) {
+      lines.push(`**${t.name}:** ${t.text}`, '');
+    }
+  };
+  for (const r of [1, 2, 3]) if (d.transcript?.some((t) => t.round === r)) roundMd(r);
+  (d.verdicts || []).forEach((v, i) => {
+    if (i > 0) {
+      lines.push(`## ↩ Follow-up: ${v.question}`, '');
+      const r = 3 + i;
+      if (d.transcript?.some((t) => t.round === r)) roundMd(r);
+    }
+    lines.push(`## ⚖ The Arbiter's verdict${i > 0 ? ` (update ${i + 1})` : ''}`, '', v.text, '');
+  });
+  return lines.join('\n');
+}
+
+function downloadTranscript() {
+  if (!debate) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([debateMarkdown(debate)], { type: 'text/markdown' }));
+  a.download = `quorum-${new Date(debate.startedAt).toISOString().slice(0, 10)}.md`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ---------------------------------------------------------------------------
+// Debate streaming
+// ---------------------------------------------------------------------------
+
+let debaters = [];        // active panel, from the start event
+let judgeInfo = null;
+let debate = null;        // current debate record — doubles as the history entry
+let activeVerdict = null; // { raw, body, actions } for the verdict being streamed
+let pendingQuestion = ''; // question the in-flight verdict answers
+let currentAbort = null;
+let replaying = false;
+
+// crypto.randomUUID needs a secure context — unavailable over plain-HTTP LAN.
+function newId() {
+  return crypto.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function showBadge(text) {
+  modeBadge.hidden = false;
+  modeBadge.textContent = text;
+}
+
+function nameOf(debaterId) {
+  return debaters.find((d) => d.id === debaterId)?.name || 'Advisor';
+}
+
+form.addEventListener('submit', (e) => {
   e.preventDefault();
   const question = questionEl.value.trim();
-  if (!question) return;
-  await runDebate(question);
+  if (question) startStream({ question });
 });
+
+followupForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const question = followupQ.value.trim();
+  if (question && debate?.verdicts.length) {
+    followupQ.value = '';
+    startStream({ question, isFollowup: true });
+  }
+});
+
+stopBtn.addEventListener('click', () => currentAbort?.abort());
 
 againBtn.addEventListener('click', () => {
   arena.hidden = true;
   againBtn.hidden = true;
+  questionEl.value = '';
   questionEl.focus();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
-async function runDebate(question) {
+async function startStream({ question, isFollowup = false }) {
+  const body = { question, config: requestConfig() };
+  if (isFollowup) {
+    body.history = {
+      question: debate.question,
+      turns: debate.transcript.map(({ round, name, text }) => ({ round, name, text })),
+      verdict: debate.verdicts.at(-1)?.text || '',
+    };
+  } else {
+    debate = {
+      id: newId(),
+      startedAt: Date.now(),
+      backend: null,
+      question,
+      debaters: [],
+      judge: null,
+      roundTitles: {},
+      transcript: [],
+      verdicts: [],
+    };
+    resetArena();
+  }
+
+  pendingQuestion = question;
   conveneBtn.disabled = true;
-  resetArena();
+  followupForm.hidden = true;
+  stopBtn.hidden = false;
+  currentAbort = new AbortController();
 
   try {
     const res = await fetch('/api/debate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, config: requestConfig() }),
+      body: JSON.stringify(body),
+      signal: currentAbort.signal,
     });
     if (!res.ok || !res.body) {
       const err = await res.json().catch(() => ({}));
@@ -274,25 +506,34 @@ async function runDebate(question) {
     }
     await consumeSSE(res.body, handleEvent);
   } catch (err) {
-    modeBadge.hidden = false;
-    modeBadge.textContent = `Error: ${err.message}`;
+    if (currentAbort.signal.aborted) {
+      showBadge('⏹ Debate stopped.');
+      // Freeze the arena cleanly: no card should keep its "speaking" cursor.
+      for (const el of roundsEl.querySelectorAll('.card.speaking')) el.classList.remove('speaking');
+    } else {
+      showBadge(`Error: ${err.message}`);
+    }
   } finally {
+    currentAbort = null;
+    stopBtn.hidden = true;
     conveneBtn.disabled = false;
     againBtn.hidden = false;
+    if (debate?.verdicts.length) followupForm.hidden = false;
   }
 }
 
 function resetArena() {
   debaters = [];
-  verdictRaw = '';
+  judgeInfo = null;
+  activeVerdict = null;
+  turnBuffers.clear();
   panelStrip.innerHTML = '';
   roundsEl.innerHTML = '';
-  verdictBody.innerHTML = '';
-  verdictSection.hidden = true;
+  followupForm.hidden = true;
   againBtn.hidden = true;
   modeBadge.hidden = true;
   arena.hidden = false;
-  arena.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (!replaying) arena.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function consumeSSE(body, onEvent) {
@@ -313,28 +554,45 @@ async function consumeSSE(body, onEvent) {
   }
 }
 
+const turnBuffers = new Map(); // `${round}-${debaterId}` → accumulated text
+
 function handleEvent(ev) {
   switch (ev.type) {
     case 'start': {
       debaters = ev.debaters;
-      const label = BACKEND_LABELS[ev.backend] || ev.backend;
-      modeBadge.hidden = false;
-      modeBadge.textContent = ev.mock
-        ? 'Demo mode — pick a real engine in ⚙︎ Engine for a live debate.'
-        : `Engine: ${label}`;
-      for (const d of ev.debaters) {
-        panelStrip.insertAdjacentHTML(
-          'beforeend',
-          `<div class="chip" title="${esc(d.tagline)}">
-             <span class="dot" style="background:${esc(d.color)}"></span>
-             <span class="who"><b>${esc(d.name)}</b><small>${esc(d.model)}</small></span>
-           </div>`
-        );
+      judgeInfo = ev.judge;
+      if (!replaying && debate) {
+        debate.backend = ev.backend;
+        debate.debaters = ev.debaters;
+        debate.judge = ev.judge;
       }
-      judgeModelEl.textContent = `${ev.judge.name} · ${ev.judge.model}`;
+      if (ev.followup) {
+        if (ev.question) {
+          roundsEl.insertAdjacentHTML(
+            'beforeend',
+            `<div class="fu-divider">↩ <em>${esc(ev.question)}</em></div>`
+          );
+        }
+      } else {
+        for (const d of ev.debaters) {
+          panelStrip.insertAdjacentHTML(
+            'beforeend',
+            `<div class="chip" title="${esc(d.tagline)}">
+               <span class="dot" style="background:${esc(d.color)}"></span>
+               <span class="who"><b>${esc(d.name)}</b><small>${esc(d.model)}</small></span>
+             </div>`
+          );
+        }
+      }
+      if (!replaying) {
+        showBadge(ev.mock
+          ? 'Demo mode — pick a real engine in ⚙︎ Engine for a live debate.'
+          : `Engine: ${BACKEND_LABELS[ev.backend] || ev.backend}`);
+      }
       break;
     }
     case 'round_start': {
+      if (!replaying && debate) debate.roundTitles[ev.round] = ev.title;
       const cards = debaters
         .map(
           (d) =>
@@ -346,22 +604,34 @@ function handleEvent(ev) {
         .join('');
       roundsEl.insertAdjacentHTML(
         'beforeend',
-        `<section class="round"><h2>Round ${ev.round} — ${esc(ev.title)}</h2><div class="cards">${cards}</div></section>`
+        `<section class="round"><h2>${ev.round <= 3 ? `Round ${ev.round} — ` : ''}${esc(ev.title)}</h2><div class="cards">${cards}</div></section>`
       );
       break;
     }
     case 'turn_start': {
+      turnBuffers.set(`${ev.round}-${ev.debater}`, '');
       cardOf(ev)?.classList.add('speaking');
       break;
     }
     case 'delta': {
+      const key = `${ev.round}-${ev.debater}`;
+      turnBuffers.set(key, (turnBuffers.get(key) || '') + ev.text);
       const card = cardOf(ev);
-      if (card) {
-        card.querySelector('.body').textContent += ev.text;
-      }
+      if (card) card.querySelector('.body').textContent += ev.text;
       break;
     }
     case 'turn_end': {
+      const key = `${ev.round}-${ev.debater}`;
+      const text = turnBuffers.get(key) || '';
+      turnBuffers.delete(key);
+      if (!replaying && debate && text) {
+        debate.transcript.push({
+          round: ev.round,
+          debaterId: ev.debater,
+          name: nameOf(ev.debater),
+          text,
+        });
+      }
       cardOf(ev)?.classList.remove('speaking');
       break;
     }
@@ -371,25 +641,54 @@ function handleEvent(ev) {
         card.classList.remove('speaking');
         card.classList.add('errored');
         card.querySelector('.body').textContent = `⚠ ${ev.message}`;
+      } else if (activeVerdict) {
+        activeVerdict.body.textContent = `⚠ ${ev.message}`;
       } else {
-        verdictBody.textContent = `⚠ ${ev.message}`;
-        verdictSection.hidden = false;
+        showBadge(`⚠ ${ev.message}`);
       }
       break;
     }
     case 'verdict_start': {
-      verdictSection.hidden = false;
-      verdictSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const block = document.createElement('section');
+      block.className = 'verdict';
+      block.innerHTML =
+        `<h2><span class="gavel">⚖︎</span> The Arbiter's verdict</h2>` +
+        `<p class="judge-model">${esc(judgeInfo?.name || 'The Arbiter')} · ${esc(judgeInfo?.model || '')}</p>` +
+        `<div class="verdict-body"></div>` +
+        `<div class="verdict-actions" hidden>` +
+        `<button type="button" class="act-copy">⎘ Copy verdict</button>` +
+        `<button type="button" class="act-dl">⬇ Download transcript</button>` +
+        `</div>`;
+      roundsEl.appendChild(block);
+      activeVerdict = {
+        raw: '',
+        body: block.querySelector('.verdict-body'),
+        actions: block.querySelector('.verdict-actions'),
+      };
+      if (!replaying) block.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       break;
     }
     case 'verdict_delta': {
-      verdictRaw += ev.text;
-      verdictBody.innerHTML = renderVerdict(verdictRaw);
+      if (!activeVerdict) break;
+      activeVerdict.raw += ev.text;
+      activeVerdict.body.innerHTML = renderVerdict(activeVerdict.raw);
+      break;
+    }
+    case 'verdict_end': {
+      if (!activeVerdict) break;
+      const text = activeVerdict.raw;
+      activeVerdict.actions.hidden = false;
+      activeVerdict.actions.querySelector('.act-copy').addEventListener('click', () => copyText(text));
+      activeVerdict.actions.querySelector('.act-dl').addEventListener('click', downloadTranscript);
+      if (!replaying && debate) {
+        debate.verdicts.push({ question: pendingQuestion, text });
+        saveDebate();
+      }
+      activeVerdict = null;
       break;
     }
     case 'error': {
-      modeBadge.hidden = false;
-      modeBadge.textContent = `Error: ${ev.message}`;
+      showBadge(`Error: ${ev.message}`);
       break;
     }
   }

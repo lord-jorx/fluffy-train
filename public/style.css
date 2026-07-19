@@ -56,7 +56,8 @@ h1 .accent { color: var(--accent); font-style: italic; }
 
 .ask { display: flex; flex-direction: column; gap: 0.75rem; }
 
-.ask textarea {
+.ask textarea,
+.followup textarea {
   width: 100%;
   background: var(--bg-raised);
   color: var(--ink);
@@ -67,7 +68,8 @@ h1 .accent { color: var(--accent); font-style: italic; }
   font-size: 1rem;
   resize: vertical;
 }
-.ask textarea:focus { outline: 2px solid var(--accent-deep); border-color: transparent; }
+.ask textarea:focus,
+.followup textarea:focus { outline: 2px solid var(--accent-deep); border-color: transparent; }
 
 .ask button {
   align-self: center;
@@ -325,6 +327,102 @@ h1 .accent { color: var(--accent); font-style: italic; }
   cursor: pointer;
 }
 .again button:hover { background: #c9a86a14; }
+
+/* Stop button (visible while a debate streams) */
+.arena-controls { text-align: center; margin-bottom: 1.2rem; }
+#stop-btn {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 999px;
+  padding: 0.45rem 1.4rem;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+#stop-btn:hover { background: #d06a4f14; }
+
+/* Follow-up question form */
+.followup {
+  max-width: 720px;
+  margin: 2.4rem auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.followup button {
+  align-self: center;
+  background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+  color: #16130e;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.65rem 1.8rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.followup button:disabled { opacity: 0.45; cursor: wait; }
+.followup button:not(:disabled):hover { filter: brightness(1.08); }
+
+.fu-divider {
+  text-align: center;
+  color: var(--ink-dim);
+  margin: 2.6rem 0 0.4rem;
+  font-size: 0.98rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.fu-divider::before, .fu-divider::after { content: ''; flex: 1; border-top: 1px solid #322c22; }
+
+/* Verdict export actions */
+.verdict-actions { margin-top: 1.2rem; display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.verdict-actions button {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent-deep);
+  border-radius: 999px;
+  padding: 0.45rem 1.1rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.verdict-actions button:hover { background: #c9a86a14; }
+
+/* History panel */
+.history-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.history-list li { display: flex; gap: 0.45rem; align-items: stretch; }
+.h-open {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-align: left;
+  background: var(--bg-card);
+  color: var(--ink);
+  border: 1px solid #322c22;
+  border-radius: 10px;
+  padding: 0.6rem 0.85rem;
+  font: inherit;
+  cursor: pointer;
+}
+.h-open:hover { border-color: var(--accent-deep); }
+.h-open b { font-size: 0.9rem; font-weight: 700; }
+.h-open small {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.68rem;
+  color: var(--ink-dim);
+}
+.h-del {
+  background: transparent;
+  color: var(--ink-dim);
+  border: 1px solid #322c22;
+  border-radius: 10px;
+  padding: 0 0.75rem;
+  font: inherit;
+  cursor: pointer;
+}
+.h-del:hover { color: var(--danger); border-color: var(--danger); }
 
 .foot {
   text-align: center;

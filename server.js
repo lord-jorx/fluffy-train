@@ -2,7 +2,15 @@ import express from 'express';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runDebate, pickBackend, resolveConfig, validateConfig, serverDefaults } from './lib/debate.js';
+import {
+  runDebate,
+  runFollowup,
+  sanitizeHistory,
+  pickBackend,
+  resolveConfig,
+  validateConfig,
+  serverDefaults,
+} from './lib/debate.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -32,6 +40,13 @@ app.post('/api/debate', async (req, res) => {
     return res.status(400).json({ error: err.message });
   }
 
+  // A request with `history` is a follow-up: the browser resends the debate
+  // context (the server is stateless) and the panel does one more round.
+  const history = req.body?.history ? sanitizeHistory(req.body.history) : null;
+  if (req.body?.history && !history) {
+    return res.status(400).json({ error: 'invalid follow-up history' });
+  }
+
   res.set({
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -56,7 +71,8 @@ app.post('/api/debate', async (req, res) => {
   };
 
   try {
-    await runDebate(question, emit, req.body?.config, aborter.signal);
+    if (history) await runFollowup(question, history, emit, req.body?.config, aborter.signal);
+    else await runDebate(question, emit, req.body?.config, aborter.signal);
   } catch (err) {
     emit({ type: 'error', message: err?.message || 'debate failed' });
   }

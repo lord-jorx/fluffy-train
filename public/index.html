@@ -21,6 +21,7 @@
     <div class="hero-inner">
       <div class="topbar">
         <p class="kicker">Convene five AI advisors · get one verdict</p>
+        <button id="history-btn" class="install-btn" type="button" aria-expanded="false">🗂 History</button>
         <button id="install-btn" class="install-btn" type="button" hidden>⬇︎ Install app</button>
       </div>
       <h1>Quo<span class="accent">rum</span></h1>
@@ -123,18 +124,35 @@
         <p class="settings-note">🔒 Keys are stored only on this device (localStorage) and sent only to the Quorum server you run.</p>
       </section>
 
+      <section id="history-panel" class="settings" hidden aria-label="Debate history">
+        <h3>🗂 Past debates</h3>
+        <ul id="history-list" class="history-list"></ul>
+        <p class="hint" id="history-empty">No debates yet — convene your first quorum.</p>
+        <p class="settings-note">Stored only in this browser (localStorage), most recent 50.</p>
+      </section>
+
       <p id="mode-badge" class="mode-badge" hidden></p>
     </div>
   </header>
 
   <main id="arena" class="arena" hidden>
+    <div class="arena-controls">
+      <button id="stop-btn" type="button" hidden>⏹ Stop debate</button>
+    </div>
     <section class="panel-strip" id="panel-strip" aria-label="The panel"></section>
+    <!-- Rounds AND verdict blocks stream into this container, so a debate can
+         grow past its first verdict with follow-up rounds. -->
     <section id="rounds"></section>
-    <section id="verdict-section" class="verdict" hidden>
-      <h2><span class="gavel">⚖︎</span> The Arbiter's verdict</h2>
-      <p class="judge-model" id="judge-model"></p>
-      <div id="verdict-body" class="verdict-body"></div>
-    </section>
+    <form id="followup-form" class="followup" hidden>
+      <textarea
+        id="followup-q"
+        rows="2"
+        maxlength="2000"
+        placeholder="Ask the panel a follow-up — the advisors keep the full debate in mind…"
+        required
+      ></textarea>
+      <button type="submit">↩ Ask the panel</button>
+    </form>
     <div class="again">
       <button id="again-btn" type="button" hidden>Ask another question</button>
     </div>

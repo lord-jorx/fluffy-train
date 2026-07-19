@@ -31,8 +31,19 @@ Defaults are Pro-friendly. On a Max plan you can promote the panel to Opus (see 
 3. **Round 2 — Cross-examination:** each panelist reads the others' openings, attacks the weakest argument, and defends their own.
 4. **Round 3 — Closing arguments:** final recommendations, with forced concessions.
 5. **Verdict:** the Arbiter reads the full transcript and delivers a structured ruling — verdict, decisive arguments, dissent worth keeping, and a confidence percentage.
+6. **Follow-ups:** after the verdict, ask the panel anything else ("what if I wait six months?"). Every advisor answers with the full debate in mind, and the Arbiter issues an updated verdict. Repeat as many times as you like.
 
-Everything streams live to the browser over Server-Sent Events.
+Everything streams live to the browser over Server-Sent Events, and a **⏹ Stop
+debate** button cancels mid-flight (the server aborts in-progress turns, so no
+usage is wasted).
+
+## History & export
+
+- Every debate (with all its follow-ups) is saved to **🗂 History** — stored
+  only in this browser's localStorage, most recent 50. Reopen any past debate
+  and even continue it with new follow-ups.
+- Each verdict has **⎘ Copy verdict** (Markdown to clipboard) and
+  **⬇ Download transcript** (the full debate as a `.md` file).
 
 ## Requirements
 
