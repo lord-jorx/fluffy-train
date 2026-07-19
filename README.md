@@ -155,6 +155,7 @@ your computer's backend.
 | `DEBATER_MODELS` | Comma-separated list of up to 5 models to override the panel — the env-var equivalent of the in-app "different model per advisor" panel. Accepts aliases (`opus`, `sonnet`, `haiku`) or full model IDs. E.g. `DEBATER_MODELS=opus,opus,sonnet,sonnet,haiku` |
 | `JUDGE_MODEL` | Model for the Arbiter (default `sonnet`; `opus` recommended on Max). |
 | `DEBATE_CONCURRENCY` | How many panelists speak at once (default 3). Lower it if you hit plan limits. |
+| `TURN_TIMEOUT_MS` | Hard per-turn ceiling (default 300000 = 5 min). Raise it for very large, slow local models. |
 | `MOCK=1` | Demo mode — canned responses, no usage. |
 | `PORT` | Server port (default 3000). |
 

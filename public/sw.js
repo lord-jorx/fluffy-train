@@ -1,5 +1,10 @@
-// Quorum service worker — offline app shell, live network for the API.
-const CACHE = 'quorum-v1';
+// Quorum service worker — installable app with offline fallback.
+//
+// Strategy: NETWORK-FIRST for the app shell, falling back to cache offline.
+// (Cache-first would freeze the installed app on whatever version it first
+// cached — author `display` rules, new features, bug fixes would never arrive.)
+// The debate API is never intercepted: it streams SSE and must hit the network.
+const CACHE = 'quorum-v2';
 const SHELL = [
   '/',
   '/index.html',
@@ -9,6 +14,8 @@ const SHELL = [
   '/icon.svg',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon-512-maskable.png',
+  '/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -30,25 +37,18 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Never touch the debate API: it streams SSE and must hit the network live.
   if (request.method !== 'GET' || url.pathname.startsWith('/api/')) return;
   if (url.origin !== self.location.origin) return;
 
-  // Cache-first for the app shell, with a network fallback that also refreshes
-  // the cache; if both fail, serve the cached index so the app still opens.
   event.respondWith(
-    caches.match(request).then(
-      (cached) =>
-        cached ||
-        fetch(request)
-          .then((res) => {
-            if (res.ok) {
-              const copy = res.clone();
-              caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
-            }
-            return res;
-          })
-          .catch(() => caches.match('/index.html'))
-    )
+    fetch(request)
+      .then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
+        }
+        return res;
+      })
+      .catch(async () => (await caches.match(request)) || caches.match('/index.html'))
   );
 });

@@ -40,8 +40,15 @@ app.post('/api/debate', async (req, res) => {
   });
   res.flushHeaders();
 
+  // When the client disconnects (tab closed, navigation), abort the debate so
+  // in-flight turns are cancelled and no new model calls start — otherwise a
+  // closed tab would silently keep burning credits/usage through all 16 turns.
   let closed = false;
-  res.on('close', () => { closed = true; });
+  const aborter = new AbortController();
+  res.on('close', () => {
+    closed = true;
+    aborter.abort(new Error('client disconnected'));
+  });
 
   const emit = (event) => {
     if (closed) return;
@@ -49,11 +56,20 @@ app.post('/api/debate', async (req, res) => {
   };
 
   try {
-    await runDebate(question, emit, req.body?.config);
+    await runDebate(question, emit, req.body?.config, aborter.signal);
   } catch (err) {
     emit({ type: 'error', message: err?.message || 'debate failed' });
   }
   res.end();
+});
+
+// Malformed JSON bodies otherwise surface as an HTML error page; keep API
+// errors JSON so the frontend can always show a clean inline message.
+app.use((err, req, res, next) => {
+  if (err?.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+    return res.status(400).json({ error: 'invalid JSON body' });
+  }
+  next(err);
 });
 
 function lanUrls(port) {

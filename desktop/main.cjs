@@ -27,7 +27,10 @@ function startServer() {
 
 function waitForServer(cb, tries = 0) {
   http
-    .get(`http://127.0.0.1:${PORT}/`, () => cb())
+    .get(`http://127.0.0.1:${PORT}/`, (res) => {
+      res.resume(); // drain so the socket is released
+      cb();
+    })
     .on('error', () => {
       if (tries > 80) return cb(new Error('server did not start in time'));
       setTimeout(() => waitForServer(cb, tries + 1), 250);
